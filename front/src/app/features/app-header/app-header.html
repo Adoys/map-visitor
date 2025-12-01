@@ -1,0 +1,29 @@
+<header class="app-header gradient-background">
+
+    <!-- Logo (solo si existe) -->
+    @if (company.getLogo()) {
+    <img [src]="company.getLogo()" alt="Logo" class="logo" />
+    }
+
+    <!-- Teléfono -->
+    @if(company.getPhone()) {
+    <a class="phone" [href]="'tel:' + company.getPhone()">
+        {{ company.getPhone() }}
+    </a>
+    }
+
+    <!-- Idioma actual -->
+    <!--
+    @if(company.getLanguages().length) {
+    <div class="flag" (click)="openLanguageModal()">
+        <img src="{{ company.getLanguages()[0].flagUrl }}" alt="Idioma actual" />
+    </div>
+    }-->
+
+    <!-- Botón admin -->
+    @if(auth.isAdmin()) {
+    <p-splitButton [model]="adminMenu" icon="pi pi-bars" class="admin-menu-button">
+    </p-splitButton>
+    }
+
+</header>

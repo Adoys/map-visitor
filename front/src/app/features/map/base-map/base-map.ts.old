@@ -1,0 +1,1006 @@
+import { Component, effect, ElementRef, inject, input, Input, output, viewChild } from '@angular/core';
+import { Actions } from 'pixi-actions';
+import { Application, Assets, Container, FederatedMouseEvent, FederatedPointerEvent, FederatedWheelEvent, Sprite, Texture, UnresolvedAsset } from 'pixi.js';
+import { Nullable } from 'primeng/ts-helpers';
+import { Subject, Subscription, buffer, debounceTime, filter } from 'rxjs';
+import { resizeCanvasToContainer, getAreaDimensions, fitBackgroundToArea, zoomAll, zoomToZone, addMapSprite, setSpriteTexture, loadAssets, resetView, isDropAllowed, getContainerCenter, rotateContainer, isBackgroundContainer, removeAllRotateIconsFrom, isMultiSlotContainer, updateZooming, isRotateIcon, getRelativeMousePosition, getDistance, onPanning, calculateAngle, onRotateContainer, onDragContainer, getTextureFromAsset, getTopCenteredCoordinates, roundTo, getAllSlotInContainer, createSessionEventParser, applyTint } from '../../../shared/helpers/pixi-utils';
+import { hasValue } from '../../../shared/helpers/utilities';
+import { ContainerClick } from '../../../shared/interfaces/ContainerClick';
+import { IBoxInfo } from '../../../shared/interfaces/IBoxInfo';
+import { IDataBackground } from '../../../shared/interfaces/IDataBackground';
+import { IMapBackground } from '../../../shared/interfaces/IMapBackground';
+import { IMapData, ISerializeMap, IMapDataMeta, SlotData } from '../../../shared/interfaces/IMapData';
+import { IMapDataType } from '../../../shared/interfaces/IMapDataType';
+import { SessionInfo } from '../../../shared/interfaces/IMapInfo';
+import { Coordinates, AreaBounds } from '../../../shared/interfaces/pixi';
+import { MapMode, SelectedElement, IMenu, IMenuItem, ActionByType, ButtonActions } from './interfaces';
+import { MapService } from '../service/map.service';
+import { contextMenuOptions } from './context-menu-options';
+import { Base64Image } from '../../../shared/interfaces/file';
+
+type HightlightType = 'detail' | 'none' | 'selected';
+
+
+@Component({
+  selector: 'base-map',
+  imports: [],
+  templateUrl: './base-map.html',
+  styleUrl: './base-map.scss'
+})
+export class BaseMapComponent {
+  elements = input<IMapData[]>([]);
+  map = input<IMapBackground[]>([]);
+  mapSize = input<IDataBackground>({ height: 175, width: 300 });
+  legendClick = output<void>();
+  containerClick = output<ContainerClick>();
+  private _mode: MapMode = 'view';
+
+  serializedData = output<ISerializeMap>();
+  mapHtmlRef = viewChild.required<ElementRef<HTMLDivElement>>('map');
+  zoomFactorIn = 1.15;
+  zoomFactorOut = 0.85;
+
+  elementsMap = new Map<string, IMapDataMeta>();
+  app: Application = new Application();
+  showContextMenu = false;
+  contextMenuPosition: Coordinates = { x: 0, y: 0 };
+  previousPosition: Coordinates = { x: 0, y: 0 };
+
+  
+  showZoomToolbar = true;
+  viewDefault: { zoom: Coordinates; pan: Coordinates } = { zoom: { x: 0, y: 0 }, pan: { x: 0, y: 0 } };
+  lastElementSelected: Nullable<SelectedElement> = null;
+  menuOptions: IMenu = contextMenuOptions;
+  menuSelected: IMenuItem[] = [];
+  showChangeMap = false;
+  clipboard: Nullable<{ id: string; angle: number }> = null;
+  openEditLayout = output<Container>();
+  mapContainer: Container = new Container();
+  mapSprite: Sprite = new Sprite({ texture: Texture.WHITE, label: 'map' });
+  doubleClickTimeout: number | null = null;
+
+  activeTouches = new Map<number, Coordinates>();
+  initialDistance = 0;
+  initialScale = 1;
+  longPressTimeout: Nullable<ReturnType<typeof setTimeout>> = null;
+  private readonly clickSubject = new Subject<{ ev: FederatedPointerEvent; target: Container; point: Coordinates }>();
+  areaBounds!: AreaBounds;
+  private clearStatesSub: Subscription = new Subscription();
+  mapLoaded: IMapBackground | null = null;
+
+  @Input()
+  set clearStates(subject: Subject<void> | undefined) {
+    if (!subject) return;
+
+    this.clearStatesSub?.unsubscribe();
+    this.clearStatesSub = subject.subscribe(() => this.resetSlotsToDefaultState());
+  }
+
+  private dragOffset: Coordinates = { x: 0, y: 0 };
+  mapIndoorService = inject(MapService);
+  slotWithState: SessionInfo<string>[] = [];
+
+  buttonClickActions: ActionByType = {
+    slots: {
+      remove: { callback: () => this.removeItem() },
+      copy: { callback: () => this.copySlot() },
+      cut: { callback: () => this.cutSlot() },
+    },
+
+    back: {
+      paste: { callback: () => this.pasteSlot() },
+      'edit-layout': { callback: () => this.editLayout() },
+      'edit-map': { callback: () => this.editMap() },
+    },
+  };
+
+  @Input() set mode(value: MapMode) {
+    this.updateLastElementSelected(null);
+    this._mode = value;
+
+    setTimeout(() => {
+      if (this.app.renderer != null) {
+        resizeCanvasToContainer(this.mapHtmlRef(), this.app, this.mapContainer, this.viewDefault);
+      }
+    }, 0);
+  }
+
+  constructor() {
+    void effect(() => {
+      void (async () => {
+        const data = this.elements();
+        const map = this.map();
+
+        if (hasValue(data)) {
+          this.clearPreviousSlots();
+          this.allocateSlots(data);
+        }
+
+        if (hasValue(map)) {
+          await this.loadBackgroundImage();
+        }
+      })();
+    });
+  }
+
+  private clearPreviousSlots(): void {
+    const toRemove = this.mapContainer.children.filter((f) => f.label !== 'map');
+    toRemove.forEach((child) => this.mapContainer.removeChild(child));
+  }
+
+  private init(): void {
+    this.initializeMap()
+      .then(() => {
+        this.app.stage.label = 'stage';
+        this.app.ticker.add((tick) => Actions.tick(tick.deltaTime / 60));
+        this.allocateSlots(this.elements());
+        return;
+      })
+      .then(() => {
+        this.fitBackground();
+        return;
+      })
+      .catch((err) => {
+        return console.error(err);
+      });
+  }
+
+  ngAfterViewInit(): void {
+    this.init();
+
+    this.clickSubject
+      .pipe(
+        buffer(this.clickSubject.pipe(debounceTime(200))),
+        filter((clicks) => clicks.length > 0),
+      )
+      .subscribe((clicks) => {
+        if (clicks.length === 1) {
+          this.handleSingleClick(clicks[0]);
+        } else {
+          this.zoomAtClick(clicks[clicks.length - 1]);
+          this.handleDoubleClick();
+        }
+      });
+  }
+
+  fitBackground() {
+    this.areaBounds = getAreaDimensions(this.mapContainer.children);
+    fitBackgroundToArea(this.mapSprite, this.mapSize(), this.mapSprite.scale.x);
+    if (hasValue(this.app)) {
+      zoomAll(this.mapContainer, this.app);
+    }
+
+    this.mapIndoorService.setMapScale({ scaleX: this.mapSprite.scale.x, scaleY: this.mapSprite.scale.y });
+  }
+
+  getFilters() {
+    return this.mapIndoorService.getFilters();
+  }
+
+  getFilterSlots() {
+    const elements = Array.from(this.elementsMap.entries());
+    const containers = this.mapContainer.children;
+
+    this.getFilters().forEach((filter) => {
+      const section = String(filter.location.section);
+      const bank = String(filter.location.bank);
+
+      const selectedMatches = this.getMatchingElements(elements, section, bank);
+
+      //get the matching keys
+      const filterKeys = selectedMatches.map(([key]) => key);
+
+      //filter containers with the matching key
+      const matchingContainers = containers.filter((container) =>
+        container.children.some((child) => filterKeys.includes(child.label)),
+      );
+
+      zoomToZone(matchingContainers, this.mapContainer);
+    });
+  }
+
+  getMatchingElements(elements: [string, IMapDataMeta][], section: string, bank: string): [string, IMapDataMeta][] {
+    const both: [string, IMapDataMeta][] = [];
+    const sectionOnly: [string, IMapDataMeta][] = [];
+    const bankOnly: [string, IMapDataMeta][] = [];
+
+    elements.forEach(([key, meta]) => {
+      const data = {
+        section: String(meta.section),
+        bank: String(meta.bank),
+      };
+
+      const sectionMatch = data.section.includes(section);
+      const bankMatch = data.bank === bank;
+
+      if (sectionMatch && bankMatch) both.push([key, meta]);
+      else if (sectionMatch) sectionOnly.push([key, meta]);
+      else if (bankMatch) bankOnly.push([key, meta]);
+    });
+
+    return both.length > 0 ? both : sectionOnly.length > 0 ? sectionOnly : bankOnly;
+  }
+
+  initializeMap() {
+    return this.app
+      .init({ background: '#fff', resizeTo: this.mapHtmlRef().nativeElement })
+      .then(() => {
+        const globalContainer = new Container({ label: 'globalContainer' });
+        const white = new Sprite({
+          texture: Texture.WHITE,
+          width: this.app.screen.width,
+          height: this.app.screen.height,
+          label: 'white-background',
+        });
+
+        this.app.stage.addChild(white);
+        this.mapContainer = addMapSprite(globalContainer, this.mapSprite);
+
+        this.app.stage.addChild(globalContainer);
+
+        this.viewDefault = {
+          zoom: { x: this.mapContainer.scale.x, y: this.mapContainer.scale.y },
+          pan: { x: this.mapContainer.x, y: this.mapContainer.y },
+        };
+
+        this.mapHtmlRef().nativeElement.appendChild(this.app.canvas).oncontextmenu = (e: MouseEvent) => {
+          e.preventDefault();
+          e.stopPropagation();
+        };
+
+        this.addMouseEvents(this.app.stage);
+        return;
+      })
+      .then(() => true)
+      .catch((err) => {
+        console.error(err);
+        return false;
+      });
+  }
+
+  onLegendClick() {
+    this.legendClick.emit();
+  }
+
+  onContainerClick(data: ContainerClick) {
+    this.containerClick.emit(data);
+  }
+
+  transformMap(mapWithResolutions: IMapBackground[]) {
+    return mapWithResolutions.map(({ src, resolution }): UnresolvedAsset => ({ alias: resolution + '', src }));
+  }
+
+  loadMap(alias: string): Promise<void> {
+    return Assets.load<Texture>(alias)
+      .then((background: Texture) => {
+        if (hasValue(background) && hasValue(this.app.canvas)) {
+          setSpriteTexture({ texture: background, sprite: this.mapSprite, screen: this.app.canvas });
+        }
+        return;
+      })
+      .catch((error) => console.error(error));
+  }
+
+  getMapByResolution(resolution: number): string {
+    return this.map().find((map) => map.resolution === resolution)?.src ?? '';
+  }
+
+  removeBackground(): Promise<void> {
+    const map = this.mapContainer.getChildByName('map');
+    if (hasValue(map)) {
+      this.mapSprite.texture = Texture.EMPTY;
+    }
+    return Promise.resolve();
+  }
+
+  async loadBackgroundImage(): Promise<void> {
+    const assets = this.transformMap(this.map());
+
+    if (!hasValue(assets) || assets.length === 0) {
+      return this.removeBackground();
+    }
+
+    const assetsAlias = await loadAssets(assets);
+
+    const numArr = assetsAlias.map(Number);
+    const max = Math.max(...numArr);
+
+    if (!hasValue(max)) {
+      return Promise.resolve();
+    }
+
+    const src = this.getMapByResolution(max);
+
+    if (!hasValue(src) || src.length === 0) {
+      return this.removeBackground();
+    }
+
+    return this.loadMapFromFile(null, src)
+      .then(() => {
+        resetView(this.mapContainer, this.viewDefault, this.app);
+        this.fitBackground();
+        this.mapLoaded = { src: src, resolution: max };
+        return;
+      })
+      .catch((error) => console.error('Error loading map:', error));
+  }
+
+  onCancel(): void {
+    this.showChangeMap = false;
+  }
+
+  onSubmit(file: Nullable<Base64Image>) {
+    this.showChangeMap = false;
+
+    if (file) {
+      this.loadMapFromFile(file)
+        .then(() => {
+          resetView(this.mapContainer, this.viewDefault, this.app);
+          this.fitBackground();
+          this.mapLoaded = { src: '', data: file.data, resolution: file.width };
+          return;
+        })
+        .catch((error) => console.error('Error loading map:', error));
+    }
+  }
+
+  loadMapFromFile(image: Base64Image | null, src?: string) {
+    const assetSrc = hasValue(src) && src.length > 0 ? src : image?.data;
+
+    if (!hasValue(assetSrc)) {
+      return Promise.resolve();
+    }
+    const newAsset: UnresolvedAsset = { src: assetSrc ?? '' };
+    Assets.add(newAsset);
+
+    return Assets.load(newAsset).then((t: Texture) => {
+      if (hasValue(t) && hasValue(this.app.canvas)) {
+        setSpriteTexture({ texture: t, sprite: this.mapSprite, screen: this.app.canvas });
+      }
+      return;
+    });
+  }
+
+  getCoordinates(event: DragEvent): Coordinates {
+    const rect = this.mapHtmlRef().nativeElement.getBoundingClientRect();
+
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    const scaleX = this.mapContainer.scale.x;
+    const scaleY = this.mapContainer.scale.y;
+    const panX = this.mapContainer.x;
+    const panY = this.mapContainer.y;
+
+    return {
+      x: (mouseX - panX) / scaleX,
+      y: (mouseY - panY) / scaleY,
+    };
+  }
+
+  onDrop(event: DragEvent) {
+    event.preventDefault();
+
+    const slotId = event.dataTransfer?.getData('slotId');
+    const slotContainer = this.mapIndoorService.getSlotContainer(slotId, 0.2);
+
+    if (!slotContainer) {
+      return;
+    }
+
+    this.updateLastElementSelected(null);
+    this.showContextMenu = false;
+
+    const { container, data } = slotContainer;
+    const position = container.position.copyFrom(this.getCoordinates(event));
+
+    const uuid = crypto.randomUUID();
+
+    const meta: IMapDataMeta = {
+      bank: data.bank,
+      section: data.section,
+      slots: data.slots,
+      type: data.type,
+    };
+
+    if (isDropAllowed(position, this.mapContainer)) {
+      this.addSlotToMap({ container, position, angle: 0, uuid, meta });
+    }
+  }
+
+  addSlotToMap({
+    angle = 0,
+    container,
+    position,
+    uuid,
+    meta,
+  }: {
+    container: Container;
+    position: Coordinates;
+    angle?: number;
+    uuid: string;
+    meta: IMapDataMeta;
+  }) {
+    const containerSlots = new Container({
+      label: container.label,
+      pivot: { x: position.x, y: position.y },
+      x: position.x,
+      y: position.y,
+    });
+
+    const { x: middleX, y: middleY } = getContainerCenter(container);
+
+    container.position.x = position.x - middleX;
+    container.position.y = position.y - middleY;
+    container.label = uuid;
+    containerSlots.addChild(container);
+
+    rotateContainer(containerSlots, angle);
+    this.elementsMap.set(uuid, meta);
+    this.mapContainer.addChild(containerSlots);
+  }
+
+  onDragOver(event: DragEvent) {
+    // Optional: Check if the drag is over a valid drop area
+    //  const intersects = checkIntersection(this.app.stage, { x: event.clientX, y: event.clientY });
+    //  event.dataTransfer!.dropEffect = intersects ? 'copy' : 'none';
+    event.dataTransfer!.dropEffect = 'copy';
+    event.preventDefault();
+  }
+
+  onDragStart(container: Container, position: FederatedMouseEvent) {
+    const mousePosition = this.mapContainer.toLocal(position.global);
+    this.dragOffset = { x: mousePosition.x - container.x, y: mousePosition.y - container.y };
+  }
+
+  openMenu(type: string, client: Coordinates) {
+    this.menuSelected = [...this.menuOptions[`${type}`]];
+
+    this.menuSelected = this.menuSelected.map((item) => ({
+      ...item,
+      disabled: item.id === 'paste' && !this.clipboard,
+    }));
+
+    this.showContextMenu = true;
+    if (this.showContextMenu) {
+      this.contextMenuPosition = client;
+    }
+  }
+
+  hightlightSlot(container: Nullable<Container>, type: HightlightType) {
+    if (container == null) {
+      return;
+    }
+
+    switch (type) {
+      case 'detail':
+        container.alpha = 0.2;
+        break;
+      case 'selected':
+        container.alpha = 0.5;
+        break;
+      case 'none':
+      default:
+        container.alpha = 1;
+    }
+  }
+
+  resetLastElementSelected() {
+    if (this.lastElementSelected != null) {
+      this.hightlightSlot(this.lastElementSelected?.container, 'none');
+      this.hightlightSlot(this.lastElementSelected?.slotContainer, 'none');
+      this.lastElementSelected = null;
+    }
+  }
+
+  updateLastElementSelected(container: Nullable<Container>) {
+    if (container && container.label.includes('rotate')) return;
+
+    if (!container || isBackgroundContainer(container)) {
+      this.resetLastElementSelected();
+      removeAllRotateIconsFrom(this.mapContainer);
+      return;
+    }
+
+    const isMultiSlot = isMultiSlotContainer(container);
+    const sameParent = this.lastElementSelected?.slotContainer.label === container?.parent?.label && isMultiSlot;
+
+    this.hightlightSlot(this.lastElementSelected?.container ?? null, 'none');
+
+    if (sameParent && this._mode === 'edit') {
+      this.hightlightSlot(container, 'detail');
+    } else {
+      this.hightlightSlot(this.lastElementSelected?.slotContainer ?? null, 'none');
+
+      if (this._mode === 'edit') {
+        this.hightlightSlot(container.parent ?? null, 'selected');
+      } else {
+        this.hightlightSlot(container ?? null, 'selected');
+      }
+    }
+
+    if (hasValue(this.lastElementSelected)) {
+      this.lastElementSelected.previousElementSelected = null;
+    }
+
+    this.lastElementSelected = {
+      type: 'slots',
+      container: container,
+      isMultiSlot,
+      slotContainer: container.parent,
+      rootContainer: container.parent.parent,
+      previousElementSelected: {
+        element: this.lastElementSelected,
+        sameParent: isMultiSlot && this.lastElementSelected?.slotContainer.label === container.parent.label,
+      },
+    };
+
+    if (!this.lastElementSelected.rootContainer.getChildByName('rotate', true) && this._mode === 'edit') {
+      this.addRotateIcon(this.lastElementSelected);
+    }
+  }
+
+  private onWheelCallback(ev: FederatedWheelEvent) {
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const scaleFactor = ev.deltaY < 0 ? this.zoomFactorIn : this.zoomFactorOut;
+    const point = { x: ev.clientX, y: ev.clientY };
+    const localPos = {
+      x: (point.x - this.mapContainer.x) / this.mapContainer.scale.x,
+      y: (point.y - this.mapContainer.y) / this.mapContainer.scale.y,
+    };
+    updateZooming({ scaleFactor, point, container: this.mapContainer, localPos });
+  }
+
+  private onPointerTap(ev: FederatedPointerEvent) {
+    ev.stopPropagation();
+
+    const clickedTarget = ev.target;
+    const point = this.mapContainer.toLocal(ev.global);
+
+    this.updateLastElementSelected(clickedTarget);
+    this.clickSubject.next({ ev, target: clickedTarget, point });
+  }
+
+  private handleSingleClick({ ev }: { ev: FederatedPointerEvent; target: Container }) {
+    this.handleEditModeClick(ev, this._mode === 'edit');
+
+    if (this._mode === 'edit') {
+      this.sendInformation(this.lastElementSelected);
+    } else {
+      this.handleDoubleClick();
+    }
+  }
+
+  private handleEditModeClick(ev: FederatedPointerEvent, isEditMode: boolean) {
+    if (isEditMode && ev.button === 0) {
+      this.showContextMenu = false;
+    }
+  }
+
+  zoomAtClick({ ev }: { ev: FederatedPointerEvent }): void {
+    const globalPos = ev.global.clone();
+    const localPos = this.mapContainer.toLocal(globalPos);
+    zoomToZone([this.mapContainer], this.mapContainer, globalPos, localPos);
+  }
+
+  private handleDoubleClick(): void {
+    this.sendInformation(this.lastElementSelected);
+  }
+
+  private sendInformation(element: SelectedElement | null) {
+    if (!hasValue(element)) {
+      this.onContainerClick({ group: null, element: null });
+      return;
+    }
+
+    const sendElement =
+      (this._mode === 'edit' && element.previousElementSelected?.sameParent === true) ||
+      (this._mode !== 'edit' && element.isMultiSlot === true);
+
+    const objectToSend = this.slotSerializer(element.rootContainer, this.elementsMap);
+
+    const state = this.slotWithState.find((slot) => slot.bank === objectToSend.bank);
+    let baseInfo: IBoxInfo<string> | null = null;
+    let slotSelected: SlotData | null = null;
+
+    if (sendElement) {
+      slotSelected = objectToSend.slots[+element.container.label - 1];
+    }
+
+    if (hasValue(objectToSend)) {
+      baseInfo = {
+        box_id: objectToSend.type,
+        uuid: objectToSend.label ?? crypto.randomUUID(),
+        bank: objectToSend.bank,
+        section: objectToSend.section,
+        coordX: objectToSend.x,
+        coordY: objectToSend.y,
+        states: state?.states,
+        rotate: objectToSend.rotate,
+        shapes: objectToSend.slots,
+      };
+    }
+
+    this.onContainerClick({ group: baseInfo, element: slotSelected });
+  }
+
+  private onRightClick(ev: FederatedMouseEvent) {
+    ev.stopPropagation();
+
+    if (this._mode === 'view') {
+      return;
+    }
+
+    const clickedTarget = ev.target;
+
+    if (isRotateIcon(clickedTarget)) {
+      return;
+    }
+
+    this.updateLastElementSelected(clickedTarget);
+    const type = this.lastElementSelected?.type ?? 'back';
+    const position = getRelativeMousePosition(ev, this.mapHtmlRef());
+    this.openMenu(type, position);
+  }
+
+  private onPointerMove(ev: FederatedPointerEvent) {
+    if (!this.activeTouches.has(ev.pointerId) || this.activeTouches.size !== 2) {
+      return;
+    }
+    this.activeTouches.set(ev.pointerId, { x: ev.global.x, y: ev.global.y });
+
+    const [touch1, touch2] = Array.from(this.activeTouches.values());
+    const newDistance = getDistance(touch1, touch2);
+
+    if (Math.abs(newDistance - this.initialDistance) > 20) {
+      const zoomFactor = newDistance / this.initialDistance;
+
+      const scaleFactor = zoomFactor / this.initialScale;
+
+      const midpoint = { x: (touch1.x + touch2.x) / 2, y: (touch1.y + touch2.y) / 2 };
+
+      const localPos = {
+        x: (midpoint.x - this.mapContainer.x) / this.mapContainer.scale.x,
+        y: (midpoint.y - this.mapContainer.y) / this.mapContainer.scale.y,
+      };
+
+      updateZooming({ scaleFactor, point: midpoint, container: this.mapContainer, localPos });
+
+      this.initialScale = zoomFactor;
+    }
+  }
+
+  private onPointerDown(c: Container, ev: FederatedPointerEvent) {
+    this.activeTouches.set(ev.pointerId, { x: ev.global.x, y: ev.global.y });
+
+    if (this.activeTouches.size === 2) {
+      const [touch1, touch2] = Array.from(this.activeTouches.values());
+      this.initialDistance = getDistance(touch1, touch2);
+      this.initialScale = this.mapContainer.scale.x;
+      return;
+    }
+
+    const clickedTarget = ev.target;
+
+    this.previousPosition = { x: ev.clientX, y: ev.clientY };
+
+    // Panning background
+    if (!this.lastElementSelected || isBackgroundContainer(clickedTarget)) {
+      c.on('pointermove', (mouseEvent) => {
+        onPanning(mouseEvent, this.previousPosition, this.mapContainer);
+        this.previousPosition = { x: mouseEvent.clientX, y: mouseEvent.clientY };
+      });
+      return;
+    }
+
+    const { rootContainer } = this.lastElementSelected;
+
+    // Rotate slot container
+    if (isRotateIcon(clickedTarget)) {
+      const initialAngle = calculateAngle(ev, rootContainer, rootContainer.rotation);
+      this.app.stage.on('pointermove', (mouseEvent) => {
+        onRotateContainer(mouseEvent, initialAngle, rootContainer);
+        this.sendInformation(this.lastElementSelected);
+      });
+      return;
+    }
+
+    // Drag slot container
+    if (this._mode === 'edit') {
+      const onPointerMove = (mouseEvent: FederatedPointerEvent) => {
+        onDragContainer(mouseEvent, rootContainer, this.dragOffset, this.mapContainer);
+        this.sendInformation(this.lastElementSelected);
+      };
+
+      c.on('pointermove', onPointerMove);
+      return;
+    }
+  }
+
+  private onPointerUp(c: Container, ev: FederatedPointerEvent) {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+    }
+
+    this.activeTouches.delete(ev.pointerId);
+
+    if (this.activeTouches.size < 2) {
+      this.initialDistance = 0;
+    }
+
+    c.off('pointermove');
+  }
+
+  private onPointerUpOutside(c: Container) {
+    c.off('pointermove');
+  }
+
+  addMouseEvents(c: Container) {
+    c.interactive = true;
+    c.onpointerdown = (ev) => this.onPointerDown(c, ev);
+    c.onpointermove = (ev) => this.onPointerMove(ev);
+    c.onpointertap = (ev) => this.onPointerTap(ev);
+    c.onpointerup = (ev) => this.onPointerUp(c, ev);
+    c.onpointerupoutside = () => this.onPointerUpOutside(c);
+    c.onrightclick = (ev) => this.onRightClick(ev);
+    c.onwheel = (ev) => this.onWheelCallback(ev);
+  }
+
+  removeRotateIcon(container: Container) {
+    const rotateIcon = container?.getChildByName('rotate');
+    if (rotateIcon) {
+      container.removeChild(rotateIcon);
+    }
+  }
+
+  addRotateIcon({ rootContainer, slotContainer }: SelectedElement) {
+    removeAllRotateIconsFrom(this.mapContainer);
+    const rotateIcon = new Sprite({
+      texture: getTextureFromAsset('rotate'),
+      cursor: 'pointer',
+      eventMode: 'static',
+      label: 'rotate',
+      scale: 0.12,
+    });
+
+    rotateIcon.position = getTopCenteredCoordinates(slotContainer, rotateIcon);
+
+    rootContainer.addChild(rotateIcon);
+
+    this.app.stage.on('pointerup', () => {
+      this.app.stage.off('pointermove');
+    });
+  }
+
+  clickOnButton(event: ButtonActions) {
+    const centerX = this.app.renderer.width / 2;
+    const centerY = this.app.renderer.height / 2;
+    const localPos = this.mapContainer.toLocal({ x: centerX, y: centerY });
+
+    if (event === 'zoomAll') {
+      resetView(this.mapContainer, this.viewDefault, this.app);
+    } else if (event === 'zoomIn') {
+      updateZooming({
+        scaleFactor: this.zoomFactorIn,
+        container: this.mapContainer,
+        point: { x: centerX, y: centerY },
+        localPos,
+      });
+    } else if (event === 'zoomOut') {
+      updateZooming({
+        scaleFactor: this.zoomFactorOut,
+        container: this.mapContainer,
+        point: { x: centerX, y: centerY },
+        localPos,
+      });
+    }
+  }
+
+  optionSelectedFromMenu(id: string) {
+    const contextType = this.lastElementSelected?.type ?? 'back';
+    const action = this.buttonClickActions[`${contextType}`][`${id}`];
+    if (!hasValue(action)) {
+      return;
+    }
+    this.showContextMenu = false;
+    action.callback();
+  }
+
+  removeItem() {
+    if (!this.lastElementSelected) {
+      return;
+    }
+
+    this.elementsMap.delete(this.lastElementSelected?.slotContainer?.label);
+    this.lastElementSelected?.slotContainer?.parent.destroy();
+    this.updateLastElementSelected(null);
+  }
+
+  editMap() {
+    this.showChangeMap = true;
+  }
+
+  removeMap() {
+    this.mapSprite.texture = Texture.WHITE;
+  }
+
+  editLayout() {
+    this.openEditLayout.emit(this.mapSprite);
+  }
+
+  copySlot() {
+    if (this.lastElementSelected) {
+      this.clipboard = {
+        angle: this.lastElementSelected.slotContainer.parent.angle,
+        id: this.lastElementSelected.slotContainer.label,
+      };
+    }
+  }
+
+  cutSlot() {
+    if (this.lastElementSelected?.type === 'slots' && hasValue(this.lastElementSelected)) {
+      this.clipboard = {
+        angle: this.lastElementSelected.slotContainer.parent.angle,
+        id: this.lastElementSelected.slotContainer.label,
+      };
+      this.mapContainer.removeChild(this.lastElementSelected.slotContainer.parent);
+      this.updateLastElementSelected(null);
+    }
+  }
+
+  pasteSlot() {
+    if (!this.clipboard) {
+      return;
+    }
+
+    const slotType: IMapDataType = this.elementsMap.get(this.clipboard.id)?.type ?? IMapDataType.SLOT_1;
+
+    const { container } = this.mapIndoorService.getSlotContainer(slotType, 0.2)!;
+    const position = this.mapContainer.toLocal(this.contextMenuPosition);
+
+    const uuid = crypto.randomUUID();
+
+    if (isDropAllowed(position, this.mapContainer))
+      this.addSlotToMap({
+        container,
+        position,
+        angle: this.clipboard.angle,
+        uuid,
+        meta: this.elementsMap.get(this.clipboard.id)!,
+      });
+  }
+
+  private allocateSlots(slots: IMapData[]) {
+    slots.forEach((aSlot) => {
+      const slotContainer = this.mapIndoorService.getSlotContainer(aSlot.type, 0.2);
+      if (slotContainer) {
+        const position = {
+          x: aSlot.x,
+          y: aSlot.y,
+        };
+
+        const meta: IMapDataMeta = {
+          bank: aSlot.bank,
+          section: aSlot.section,
+          slots: aSlot.slots,
+          type: aSlot.type,
+          label: aSlot.label,
+          sectionName: aSlot.sectionName,
+        };
+
+        this.addSlotToMap({
+          container: slotContainer.container,
+          position,
+          angle: aSlot.rotate,
+          uuid: crypto.randomUUID(),
+          meta,
+        });
+      }
+    });
+  }
+
+  private slotSerializer(slotContainer: Container, map: Map<string, IMapDataMeta>): IMapData {
+    const slot = slotContainer.children.filter((f) => !isRotateIcon(f)).pop()!;
+    const elementInMap = map.get(slot.label)!;
+    const roundTo3 = roundTo(3);
+
+    return {
+      bank: elementInMap.bank,
+      numSlot: slot.children.length,
+      rotate: roundTo3(slotContainer.angle),
+      section: elementInMap.section,
+      ...(elementInMap.sectionName != null && { sectionName: elementInMap.sectionName }),
+      slots: elementInMap.slots.map((s, i) => ({ id: s.id, index: i })),
+      type: elementInMap.type,
+      x: roundTo3(slotContainer.x),
+      y: roundTo3(slotContainer.y),
+      label: slot.label,
+    };
+  }
+
+  serializeMap() {
+    const roundTo0 = roundTo(0);
+    const serializedSlots = getAllSlotInContainer(this.mapContainer).map((slot) =>
+      this.slotSerializer(slot, this.elementsMap),
+    );
+
+    this.serializedData.emit({
+      shapes: serializedSlots,
+      map: [
+        {
+          src: this.mapLoaded?.src ?? '',
+          data: this.mapLoaded?.data,
+          resolution: this.mapLoaded?.resolution ?? 0,
+        },
+      ],
+      size: {
+        width: roundTo0(this.mapContainer.width / this.mapContainer.scale.x),
+        height: roundTo0(this.mapContainer.height / this.mapContainer.scale.y),
+      },
+    });
+  }
+
+  setSlotsDecoration(data: SessionInfo<string>[]) {
+    const mapStates = this.mapIndoorService.getMapStates().value;
+    const filters = this.getFilters();
+
+    const payload = {
+      containers: getAllSlotInContainer(this.mapContainer),
+      elementsMap: this.elementsMap,
+      getStateForSlot: (slot: { states: string[] }) => {
+        const matchedState = mapStates.find((s) => s.state === slot.states[0]);
+
+        if (matchedState?.state === 'machine_meets_filter') {
+          this.getFilterSlots();
+        }
+
+        return matchedState;
+      },
+      filters: filters.length > 0 ? filters : undefined,
+    };
+
+    this.slotsWithState.push(...data);
+    this.slotsWithState.flatMap(createSessionEventParser(payload)).filter(hasValue).forEach(applyTint);
+  }
+
+  resetSlotsToDefaultState() {
+    const defaultState = this.mapIndoorService.getDefaultState();
+    if (!defaultState) return;
+
+    const resetData = this.slotsWithState.map((slot) => ({ ...slot, states: [defaultState.state] }));
+
+    this.setSlotsDecoration(resetData);
+    this.slotsWithState = [];
+  }
+
+  updateElement(data: ContainerClick): void {
+    if (!hasValue(this.lastElementSelected) || !hasValue(data.group)) {
+      return;
+    }
+    if (hasValue(data.group?.rotate)) {
+      rotateContainer(this.lastElementSelected.rootContainer, data.group.rotate);
+    }
+    this.lastElementSelected.rootContainer.position.x = data.group.coordX;
+    this.lastElementSelected.rootContainer.position.y = data.group.coordY;
+
+    const meta: IMapDataMeta | undefined = this.elementsMap.get(this.lastElementSelected.slotContainer.label);
+    if (!hasValue(meta)) {
+      return;
+    }
+    meta.bank = data.group.bank;
+    meta.section = data.group.section;
+    if (hasValue(data.element)) {
+      meta.slots[data.element.index].id = data.element.id;
+    }
+
+    this.elementsMap.set(this.lastElementSelected.slotContainer.label, meta);
+  }
+
+  ngOnDestroy(): void {
+    Assets.reset();
+    this.clickSubject?.unsubscribe();
+  }
+ 
+}

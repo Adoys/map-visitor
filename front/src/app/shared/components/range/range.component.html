@@ -1,0 +1,13 @@
+<label for="sliderControl">{{ parsedLabel() }}</label>
+<input
+  id="sliderControl"
+  type="range"
+  class="slider"
+  [disabled]="isDisabled"
+  [max]="max()"
+  [min]="min()"
+  [step]="step()"
+  [value]="value"
+  (blur)="onTouched()"
+  (input)="onInputChange($event)"
+/>

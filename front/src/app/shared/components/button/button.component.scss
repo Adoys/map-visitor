@@ -1,0 +1,58 @@
+@use '../../../style' as gstyles;
+
+.btn {
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgb(0 0 0 / 10%);
+  transition:
+    filter 0.3s ease,
+    transform 0.3s ease;
+
+  &:hover {
+    filter: brightness(0.9);
+  }
+
+  &:active {
+    filter: brightness(0.8);
+  }
+
+  &:disabled {
+    background-color: gstyles.$disabled-color !important;
+    border: 1px solid gstyles.$disabled-color;
+    color: gstyles.$disabled-color;
+    cursor: not-allowed;
+  }
+
+  &.danger {
+    background-color: gstyles.$danger-color;
+  }
+
+  &.primary {
+    background-color: gstyles.$primary-color;
+  }
+
+  &.success {
+    background-color: gstyles.$success-color;
+  }
+
+  &.info {
+    background-color: gstyles.$info-color;
+  }
+
+  &.warning {
+    background-color: gstyles.$warning-color;
+  }
+
+  &.basic {
+    background-color: gstyles.$basic-color;
+    color: gstyles.$black-color;
+  }
+}

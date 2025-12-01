@@ -1,0 +1,21 @@
+@use '../../../style.scss' as gstyles;
+
+.body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 1rem;
+  gap: 1rem;
+
+  .sliders-container {
+    display: flex;
+    flex-flow: column;
+    flex: 1;
+    gap: 1rem;
+  }
+
+  .buttons-container {
+    display: flex;
+    justify-content: space-around;
+  }
+}

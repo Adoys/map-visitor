@@ -1,0 +1,50 @@
+<p>edit-layout-component works!</p>
+<div class="card side-menu-container">
+  <div class="body">
+    <h1>Select Scale</h1>
+    <custom-checkbox [value]="freeMode" label="Free Mode" (valueChange)="onFreeModeChange($event)" />
+    <div class="sliders-container">
+      @if (freeMode) {
+      <custom-range
+        label="Scale X"
+        [max]="rangeMax"
+        [min]="rangeMin"
+        [step]="rangeStep"
+        [value]="currentValue.scaleX"
+        (valueChange)="scaleXChanged($event)"
+      />
+      <custom-range
+        label="Scale Y"
+        [max]="rangeMax"
+        [min]="rangeMin"
+        [step]="rangeStep"
+        [value]="currentValue.scaleY"
+        (valueChange)="scaleYChanged($event)"
+      />
+      } @else {
+      <custom-range
+        label="Scale"
+        [max]="rangeMax"
+        [min]="rangeMin"
+        [step]="rangeStep"
+        [value]="currentValue.scaleX"
+        (valueChange)="scaleChanged($event)"
+      />
+      }
+      <custom-button (clickButton)="reset()">
+        <fa-icon [icon]="['fas', 'cancel']" />
+        Reset
+      </custom-button>
+    </div>
+    <div class="buttons-container">
+      <custom-button (clickButton)="save()" class="save">
+        <fa-icon [icon]="['fas', 'save']" />
+        Save
+      </custom-button>
+      <custom-button (clickButton)="onCancel()">
+        <fa-icon [icon]="['fas', 'cancel']" />
+        Cancel
+      </custom-button>
+    </div>
+  </div>
+</div>

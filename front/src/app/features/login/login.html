@@ -1,0 +1,21 @@
+<div class="login-container">
+    <p-card class="login-card">
+    <h2 class="title">Bienvenido</h2>
+    <p class="subtitle">Inicia sesión para continuar</p>
+
+    <div class="p-fluid form">
+        <div class="field">
+        <label for="user">Usuario</label>
+        <input id="user" type="text" pInputText [(ngModel)]="username" placeholder="Escribe tu usuario" />
+        </div>
+        <div class="field">
+        <label for="pass">Contraseña</label>
+        <input id="pass" type="password" pPassword [(ngModel)]="password" feedback="false" placeholder="Escribe tu contraseña" />
+        </div>
+        <div class="button-container">
+            <p-button label="Entrar" icon="pi pi-sign-in" class="login-button" severity="success" (onClick)="login()"></p-button>
+            <p-button label="Volver" icon="pi pi-sign-in" class="return-button" severity="secondary" (onClick)="return()"></p-button>
+        </div>
+    </div>
+    </p-card>
+</div>

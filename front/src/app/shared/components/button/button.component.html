@@ -1,0 +1,8 @@
+<button
+  class="btn {{ status() }} "
+  [ngClass]="{ 'full-width': fullWidth() }"
+  [disabled]="disabled()"
+  (click)="onClick()"
+>
+  <ng-content />
+</button>

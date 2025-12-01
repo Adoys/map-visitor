@@ -1,0 +1,39 @@
+$white-color: #fff;
+$black-color: #000;
+$primary-color: #598bff;
+$success-color: #2ce69b;
+$info-color: #42aaff;
+$warning-color: #ffc94d;
+$danger-color: #ff708d;
+$basic-color: #edf1f7;
+$disabled-color: rgb(143 155 179 / 24%);
+$background-color: #f7f9fc;
+$border-color: #e4e9f2;
+$focus-color: #36f;
+
+.card {
+  height: 100%;
+  width: 100%;
+  border-radius: 5px;
+  background-color: white;
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.no-display {
+  display: none;
+}
+
+.side-menu-container {
+  width: 20rem;
+  display: flex;
+  flex-flow: column;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+}

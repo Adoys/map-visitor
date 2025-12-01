@@ -1,0 +1,35 @@
+@use '../../../style' as gstyles;
+
+.check-input-container {
+  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+
+  .label-container {
+    font-size: 1rem;
+
+    .required {
+      color: gstyles.$danger-color;
+    }
+  }
+
+  input {
+    padding: 0.5rem;
+    font-size: 1rem;
+    border: 1px solid gstyles.$border-color;
+    background-color: gstyles.$background-color;
+    border-radius: 0.25rem;
+    outline: none;
+    transition: border-color 0.3s ease;
+
+    &.invalid {
+      border: 1px solid gstyles.$danger-color;
+    }
+
+    &:focus {
+      background-color: gstyles.$white-color;
+      border-color: gstyles.$focus-color;
+    }
+  }
+}

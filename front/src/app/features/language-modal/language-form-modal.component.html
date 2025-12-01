@@ -1,0 +1,41 @@
+<p-toast position="top-right"></p-toast>
+
+<form [formGroup]="form" (ngSubmit)="submit()" class="p-fluid p-4" style="min-width: 480px;">
+  <!-- Código -->
+  <div class="field mb-3 form-row margin-bottom">
+    <label for="code" class="font-semibold mb-1 block">Código</label>
+    <input id="code" pInputText formControlName="code" class="w-full" placeholder="es, en, fr..." />
+  </div>
+
+  <!-- Nombre -->
+  <div class="field mb-3 form-row margin-bottom">
+    <label for="name" class="font-semibold mb-1 block">Nombre</label>
+    <input id="name" pInputText formControlName="name" class="w-full" placeholder="Español, Inglés…" />
+  </div>
+
+  <!-- Checkbox -->
+  <div class="flex align-items-center gap-2 mb-3 margin-bottom">
+    <p-checkbox formControlName="isDefault" inputId="isDefault" style="margin-right: 7px;"></p-checkbox>
+    <label for="isDefault" class="font-medium">Establecer idioma por defecto</label>
+  </div>
+
+  <!-- Bandera -->
+  <div class="field mb-3 margin-bottom">
+    <label class="font-semibold mb-2 block">Bandera</label>
+
+    <div class="flex align-items-center gap-3">
+      <input type="file" accept="image/*" (change)="onFlagSelected($event)" />
+
+      <img *ngIf="previewFlag" [src]="previewFlag" class="border-1 surface-border border-round"
+        style="width: 50px; height: 35px; object-fit: cover;" />
+    </div>
+  </div>
+
+  <!-- Botones -->
+  <div class="flex justify-content-end gap-2 mt-4">
+    <button pButton type="button" label="Cancelar" class="p-button-text" (click)="ref.close()"></button>
+
+    <button pButton type="submit" label="Guardar" class="p-button-success" [disabled]="form.invalid"></button>
+  </div>
+
+</form>

@@ -1,0 +1,8 @@
+<div class="card slots-container side-menu-container">
+  @for (item of slotsMenu; track item) {
+  <div class="slot-container">
+    <img [src]="item.data" alt="" class="slot-image" draggable="true" (dragstart)="onDragStart($event, item)" />
+    <span class="slot-label">{{ item.label }}</span>
+  </div>
+  }
+</div>

@@ -1,0 +1,19 @@
+<div class="check-input-container">
+  <input
+    [id]="label()"
+    type="checkbox"
+    [disabled]="isDisabled"
+    [ngClass]="{ invalid: isInvalid }"
+    (change)="onChanged($event)"
+    [checked]="value"
+    (blur)="onTouched()"
+  />
+
+  <div class="label-container">
+    @if (isRequired) {
+    <span class="required">*</span>
+    } @if (label()) {
+    <span>{{ label() }}</span>
+    }
+  </div>
+</div>
