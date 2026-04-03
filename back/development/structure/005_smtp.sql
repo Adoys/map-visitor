@@ -1,0 +1,14 @@
+USE map_visitor;
+
+CREATE TABLE smtp (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    host VARCHAR(255),
+    port INT,
+    security VARCHAR(50),
+    username VARCHAR(255),
+    password VARCHAR(255),
+    email VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
