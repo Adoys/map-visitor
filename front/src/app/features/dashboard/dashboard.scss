@@ -1,21 +1,38 @@
-.map-indoor-container {
+.dashboard {
   display: flex;
-  flex-direction: row;
-  height: 100%;
+  flex-direction: column;
+  height: 100vh; // Toda la pantalla
   width: 100%;
+  overflow: hidden; // Evita scroll global
+}
+
+app-header {
+  height: 50px;
+  flex-shrink: 0; // No se reduce nunca
+}
+
+.dashboard-body {
+  flex: 1 1 auto;
+  overflow: hidden; // Imprescindible
+  display: flex; // Para que el contenido interno pueda expandirse
+}
+
+.map-indoor-container {
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
 
   .canvas-container {
     flex: 1 1 auto;
     min-width: 0;
-    width: auto;
+    overflow: hidden;
     display: block;
   }
 
   .slots-selector-container {
     width: 320px;
-    overflow-y: auto;
     min-width: 320px;
+    overflow-y: auto;
     flex-shrink: 0;
-    padding-top: 56px;
   }
 }

@@ -1,5 +1,11 @@
 <header class="app-header gradient-background">
 
+    <!-- Botón admin -->
+    @if(auth.isAdmin()) {
+    <p-splitButton [model]="adminMenu" icon="pi pi-bars" class="admin-menu-button">
+    </p-splitButton>
+    }
+
     <!-- Logo (solo si existe) -->
     @if (company.getLogo()) {
     <img [src]="company.getLogo()" alt="Logo" class="logo" />
@@ -7,23 +13,40 @@
 
     <!-- Teléfono -->
     @if(company.getPhone()) {
-    <a class="phone" [href]="'tel:' + company.getPhone()">
+    <a class="phone" [href]="getTranslateService().instant('HEADER.PHONE') + company.getPhone()">
         {{ company.getPhone() }}
     </a>
     }
 
     <!-- Idioma actual -->
-    <!--
-    @if(company.getLanguages().length) {
-    <div class="flag" (click)="openLanguageModal()">
-        <img src="{{ company.getLanguages()[0].flagUrl }}" alt="Idioma actual" />
-    </div>
-    }-->
+    @if(languages.length) {
+    <div class="flag">
+        <p-select [options]="languages" [(ngModel)]="selectedLanguage" (onChange)="languageChange()"
+            style="min-width: 200px;" class="w-full" optionValue="code" optionLabel="name"
+            placeholder="{{ 'HEADER.LANGUAGE_LABEL' | translate }}">
 
-    <!-- Botón admin -->
-    @if(auth.isAdmin()) {
-    <p-splitButton [model]="adminMenu" icon="pi pi-bars" class="admin-menu-button">
-    </p-splitButton>
+            <!-- Plantilla personalizada para mostrar bandera + nombre -->
+            <ng-template let-lang #item>
+                <ng-container *ngIf="lang.flag; else noFlag">
+                    <img [src]="lang.flag" alt="{{ lang.name }}" style="width:20px;height:14px;margin-right:5px;">
+                </ng-container>
+                <ng-template #noFlag>
+                    <span style="display:inline-block;width:20px;height:14px;background:#eee;margin-right:5px;"></span>
+                </ng-template>
+                <span>{{ lang.name }}</span>
+            </ng-template>
+
+            <ng-template #selectedItem let-lang>
+                <ng-container *ngIf="lang?.flag; else noFlagSelected">
+                    <img [src]="lang.flag" alt="{{ lang.name }}" style="width:20px;height:14px;margin-right:5px;">
+                </ng-container>
+                <ng-template #noFlagSelected>
+                    <span style="display:inline-block;width:20px;height:14px;background:#eee;margin-right:5px;"></span>
+                </ng-template>
+                <span>{{ lang?.name }}</span>
+            </ng-template>
+        </p-select>
+    </div>
     }
 
 </header>

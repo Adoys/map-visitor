@@ -1,0 +1,129 @@
+{
+  "HEADER": {
+    "PHONE": "Phone",
+    "ADMIN_MENU": {
+      "USERS": "Users",
+      "SETTINGS": "Settings",
+      "LANGUAGES": "Languages",
+      "LOGOUT": "Logout"
+    },
+    "LANGUAGE_LABEL": "Language"
+  },
+  "DASHBOARD": {
+    "WELCOME": "Welcome"
+  },
+  "USERS": {
+    "ADD_USER": "Add User",
+    "CHANGE_PASSWORD": "Change Password",
+    "CONFIRM_DELETE": "Do you want to delete the user \"{{name}}\"?",
+    "CREATE_SUCCESS": "User created successfully",
+    "DELETE_ERROR": "Error deleting user",
+    "DELETE_SUCCESS": "User deleted successfully",
+    "DELETE_USER": "Delete User",
+    "EDIT_USER": "Edit User",
+    "EMAIL": "Email",
+    "IDENTIFIER": "Identifier",
+    "IDENTIFIER_PLACEHOLDER": "Identifier to access",
+    "NAME": "Name",
+    "NEW_PASSWORD": "New Password",
+    "PASSWORD": "Password",
+    "PASSWORD_CHANGE_SUCCESS": "Password changed successfully",
+    "PASSWORD_CHANGE_ERROR": "Error changing password",
+    "PASSWORD_CHANGE_DETAIL": "Password for user \"{{name}}\" changed successfully",
+    "ROLE": "Role",
+    "ROLE_ADMIN": "Administrator",
+    "ROLE_SCREEN": "Information Point",
+    "SAVE_ERROR": "Error saving user",
+    "TITLE": "User Management",
+    "UPDATE_SUCCESS": "User updated successfully"
+  },
+  "SETTINGS": {
+    "NOTIFICATIONS": "Notifications",
+    "SECURITY": "Security",
+    "TAB_EMAIL": "Email",
+    "TAB_GENERAL": "General",
+    "TITLE": "Settings",
+    "GENERAL": {
+      "LOGO": "Company logo",
+      "PHONE": "Phone",
+      "WHATSAPP": "WhatsApp",
+      "EMAIL": "E-mail",
+      "BACKGROUND_COLOR": "Background color",
+      "HEADER_COLOR": "Header color",
+      "BUTTON_COLOR": "Button color",
+      "INFO_MARKER_ICON": "Info marker icon",
+      "TOURIST_MARKER_ICON": "Tourist marker icon",
+      "FILE_MUST_BE_IMAGE": "The file must be an image.",
+      "CLEAR_IMAGE": "Clear image",
+      "SAVE_SUCCESS": "General settings saved successfully",
+      "SAVE_ERROR": "An error occurred while saving general settings",
+      "IMAGE_COMPRESSED_SUCCESS": "Image compressed successfully",
+      "IMAGE_SIZE_TOO_LARGE": "The image is still too large after compression",
+      "IMAGE_TOTAL_TOO_LARGE": "The total of the selected images exceeds the allowed quota"
+    },
+    "EMAIL": {
+      "HOST": "Host",
+      "PORT": "Port",
+      "SECURITY": "Security",
+      "EMAIL_FROM": "Email",
+      "USERNAME": "Username",
+      "PASSWORD": "Password",
+      "TEST_BUTTON": "TEST SMTP",
+      "TEST_EMAIL": "Test Email Destination",
+      "TEST_TITLE": "Test SMTP",
+      "CREATE_SUCCESS": "SMTP information saved successfully",
+      "CREATE_ERROR": "An error occurred while saving the information",
+      "TEST_SUCCESS": "Test email sent successfully",
+      "TEST_ERROR": "An error occurred while sending the test email"
+    }
+  },
+  "LANGUAGES": {
+    "ADD": "Add language",
+    "CODE": "Code",
+    "CONFIRM_DELETE": "Do you want to delete the language \"{{name}}\"?",
+    "CREATE_SUCCESS": "Language created successfully",
+    "DEFAULT_LABEL": "Set as default language",
+    "DEFAULT": "Default",
+    "DELETE_ERROR": "Error deleting language",
+    "DELETE_SUCCESS": "Language deleted successfully",
+    "DELETE": "Delete language",
+    "EDIT": "Edit language",
+    "FLAG": "Flag",
+    "LANGUAGE_ENUM": "Spanish, English...",
+    "NAME": "Name",
+    "SAVE_ERROR": "Error saving language",
+    "SELECT_FLAG": "Select flag",
+    "TITLE": "Language Management",
+    "UPDATE_SUCCESS": "Language updated successfully"
+  },
+  "LOGIN": {
+    "TITLE": "Welcome",
+    "SUB_TITLE": "Log in to continue",
+    "USER": "User",
+    "PASSWORD": "Password",
+    "PASSWORD_PLACEHOLDER": "Enter your password",
+    "LOGIN_BUTTON": "Log in",
+    "RETURN_BUTTON": "Return",
+    "RECOVER_PASSWORD": "Forgot your password?",
+    "RECOVER_USERNAME_REQUIRED": "Please enter your username to recover password",
+    "RECOVER_PASSWORD_SUCCESS": "Recovery email sent successfully. Check your inbox.",
+    "RECOVER_PASSWORD_ERROR": "Unable to send recovery email. Please try again.",
+    "LOGIN_ERROR": "Login error"
+  },
+  "COMMON_LABELS": {
+    "ACTIONS": "Actions",
+    "YES": "Yes",
+    "NO": "No",
+    "CANCEL": "Cancel",
+    "SAVE": "Save",
+    "TEST": "Test",
+    "SUCCESS": "Success",
+    "ERROR": "Error"
+  },
+  "UNAUTHORIZED": {
+    "TITLE": "Unauthorized",
+    "MESSAGE": "You do not have permission to access this page.",
+    "RETURN_BUTTON": "Return to Dashboard",
+    "CONTACT_ADMIN": "Your account is authenticated, but does not have the necessary permissions to view this section.\nIf you believe this is an error, please contact the administrator."
+  }
+}

@@ -24,10 +24,20 @@
   }
 }
 
-.flag img {
-  width: 28px;
-  height: 20px;
-  cursor: pointer;
+.flag {
+  position: absolute;
+  right: 10px;
+
+  img {
+    width: 28px;
+    height: 20px;
+    cursor: pointer;
+  }
+
+  label {
+    text-align: center;
+    
+  }
 }
 
 .admin-button {

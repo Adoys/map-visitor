@@ -11,7 +11,7 @@
     width: 28rem;
     padding: 2rem;
     border-radius: 1rem;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     background-color: #ffffff;
 }
 
@@ -48,7 +48,13 @@
 
 .button-container {
     width: 100%;
-    display:flex;
+    display: flex;
     flex-direction: row;
     justify-content: space-between
+}
+
+.forgot-password {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
 }

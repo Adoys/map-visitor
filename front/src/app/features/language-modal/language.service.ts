@@ -11,7 +11,7 @@ export class LanguagesService {
   constructor(private http: HttpClient) { }
 
   findAll(): Observable<Language[]> {
-    return this.http.get<any[]>(this.api);
+    return this.http.get<Language[]>(this.api);
   }
 
   create(dto: Language): Observable<any> {

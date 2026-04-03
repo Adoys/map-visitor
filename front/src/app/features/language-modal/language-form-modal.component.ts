@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, inject, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 
@@ -6,9 +6,10 @@ import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { CheckboxModule } from 'primeng/checkbox';
+import { FileUploadModule } from 'primeng/fileupload';
 import { LanguagesService } from './language.service';
 import { MessageService } from 'primeng/api';
-import { ToastModule } from 'primeng/toast';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 
 @Component({
@@ -21,12 +22,15 @@ import { ToastModule } from 'primeng/toast';
     ButtonModule,
     InputTextModule,
     CheckboxModule,
-    ToastModule,
+    TranslatePipe,
+    FileUploadModule,
   ],
+  providers: [],
   templateUrl: 'language-form-modal.component.html',
   styleUrl: 'language-form-modal.component.scss',
 })
 export class LanguageFormModalComponent implements OnInit {
+  private translate = inject(TranslateService);
 
   form!: FormGroup;
   previewFlag: string | null = null;
@@ -62,35 +66,63 @@ export class LanguageFormModalComponent implements OnInit {
         this.ref.close(true);
         this.messageService.add({
           severity: 'success',
-          summary: 'Correcto',
-          detail: 'Idioma guardado correctamente'
+          summary: this.translate.instant('COMMON_LABELS.SUCCESS'),
+          detail: this.translate.instant(this.config.data ? 'LANGUAGES.UPDATE_SUCCESS' : 'LANGUAGES.CREATE_SUCCESS')
         });
       },
       error: (err) => {
-        console.error(err);
         this.messageService.add({
           severity: 'error',
-          summary: 'Error',
-          detail: err.error?.message || 'Error al guardar el idioma'
+          summary: this.translate.instant('COMMON_LABELS.ERROR'),
+          detail: err.error?.message || this.translate.instant('LANGUAGES.SAVE_ERROR')
         });
       }
     });
   }
 
-  onFileSelected(event: any) {
+  onFlagSelected(event: any) {
     const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result as string;
-        this.form.patchValue({ flag: base64 });
-        this.previewFlag = base64;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // Redimensionamos manteniendo el aspect ratio
+        const maxSize = 512; // ancho o alto máximo
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height && width > maxSize) {
+          height = (height / width) * maxSize;
+          width = maxSize;
+        } else if (height > width && height > maxSize) {
+          width = (width / height) * maxSize;
+          height = maxSize;
+        } else if (width > maxSize) {
+          width = maxSize;
+          height = maxSize;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Convertimos a base64 pero en formato comprimido JPEG
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+
+        this.form.patchValue({ flag: compressedBase64 });
+        this.previewFlag = compressedBase64;
       };
-      reader.readAsDataURL(file);
-    }
+
+      img.src = e.target?.result as string;
+    };
+
+    reader.readAsDataURL(file);
   }
 
-  onFlagSelected(base64: Event) {
-    console.log(base64);
-  }
 }

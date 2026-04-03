@@ -5,10 +5,19 @@ html,
 body {
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  height: 100%;
+
 }
 
 .gradient-background {
   background: #bdc2e8;
   background: linear-gradient(to right,
       #bdc2e8, #d7d9eb, #e6dee9);
+}
+
+.div-separator {
+  border-bottom: 1px solid #cacaca;
+  height: 5px;
+  margin-bottom: 10px;
 }

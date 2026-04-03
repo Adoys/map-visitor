@@ -1,18 +1,17 @@
 <p-confirmDialog></p-confirmDialog>
-<p-toast position="top-right"></p-toast>
 
 <div class="flex justify-content-between align-items-center mb-3">
-  <button pButton label="Agregar idioma" icon="pi pi-plus" (click)="openCreateModal()"></button>
+  <button pButton label="{{ 'LANGUAGES.ADD' | translate }}" icon="pi pi-plus" (click)="openCreateModal()"></button>
 </div>
 
 <p-table [value]="languages" [loading]="loading" dataKey="id" responsiveLayout="scroll">
   <ng-template pTemplate="header">
     <tr>
-      <th>Código</th>
-      <th>Nombre</th>
-      <th>Por defecto</th>
-      <th>Bandera</th>
-      <th style="width:140px">Acciones</th>
+      <th>{{ 'LANGUAGES.CODE' | translate }}</th>
+      <th>{{ 'LANGUAGES.NAME' | translate }}</th>
+      <th>{{ 'LANGUAGES.DEFAULT' | translate }}</th>
+      <th>{{ 'LANGUAGES.FLAG' | translate }}</th>
+      <th style="width:140px">{{ 'COMMON_LABELS.ACTIONS' | translate }}</th>
     </tr>
   </ng-template>
 

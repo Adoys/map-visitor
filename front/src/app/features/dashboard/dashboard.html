@@ -1,32 +1,31 @@
-<div>
-  <app-header></app-header>
+<app-header></app-header>
 
-</div>
+<div class="dashboard-body">
 
-<div class="map-indoor-container">
+  <base-map class="canvas-container"></base-map>
+  <!-- 
+    <base-map
+    <div class="map-indoor-container">
+      #canvas
+      class="canvas-container"
+      [map]="map()"
+      [elements]="slots"
+      [mapSize]="mapSize()"
+      [mode]="mode()"
+      (openEditLayout)="onShowEditLayout($event)"
+      (serializedData)="onSerializedData($event)"
+      (containerClick)="onContainerClick($event)"
+      (legendClick)="onLegendClick()"
+      [clearStates]="clearState$()"
+    />
+  -->
+
+
   <!--
-  <base-map
-    #canvas
-    class="canvas-container"
-    [map]="map()"
-    [elements]="slots"
-    [mapSize]="mapSize()"
-    [mode]="mode()"
-    (openEditLayout)="onShowEditLayout($event)"
-    (serializedData)="onSerializedData($event)"
-    (containerClick)="onContainerClick($event)"
-    (legendClick)="onLegendClick()"
-    [clearStates]="clearState$()"
-  />
--->
-
-
-<base-map></base-map>
-<!--
-@if (showEditLayout) {
-  <edit-layout-component [mapContainer]="mapContainer" (cancelLayout)="onCancel()" (submitLayout)="onSubmit($event)" />
-  } @else if(mode() === 'edit') {
-  <slots-selector class="slots-selector-container" />
-  }-->
+  @if (showEditLayout) {
+    <edit-layout-component [mapContainer]="mapContainer" (cancelLayout)="onCancel()" (submitLayout)="onSubmit($event)" />
+    } @else if(mode() === 'edit') {
+    <slots-selector class="slots-selector-container" />
+    }
+    </div>-->
 </div>
-

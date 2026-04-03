@@ -2,15 +2,14 @@
   <div class="card">
     <div class="icon">🔒</div>
 
-    <h1>No tienes permisos para acceder</h1>
+    <h1>{{ 'UNAUTHORIZED.MESSAGE' | translate }}</h1>
 
     <p>
-      Tu cuenta está autenticada, pero no dispone de los permisos necesarios para ver esta sección.
-      Si crees que se trata de un error, contacta con el administrador.
+      {{ 'UNAUTHORIZED.CONTACT_ADMIN' | translate }}
     </p>
 
     <button class="btn-primary" (click)="goHome()">
-      Volver al inicio
+      {{ 'UNAUTHORIZED.RETURN_BUTTON' | translate }}
     </button>
   </div>
 </section>

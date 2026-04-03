@@ -1,0 +1,87 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="p-fluid p-4" style="min-width: 500px;">
+  <div class="grid">
+
+    <div class="field mb-3 form-row margin-bottom">
+      <div class="image-upload-row">
+        <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.LOGO' | translate }}</label>
+        <button pButton type="button" class="p-button-secondary p-button-sm mt-2" (click)="clearImage('logoBase64')"
+          [label]="'SETTINGS.GENERAL.CLEAR_IMAGE' | translate">
+        </button>
+      </div>
+      <div class="image-upload-row">
+        <div class="image-preview mt-2">
+          <img [src]="logoPreview || noImageUri" alt="Logo preview" />
+        </div>
+        <input type="file" accept="image/*" (change)="onImageChange($event, 'logoBase64')" />
+      </div>
+    </div>
+
+    <div class="field  mb-3 form-row margin-bottom" style="display: flex; gap: 1rem; align-items: center;">
+      <div style="flex: 1;">
+        <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.PHONE' | translate }}</label>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <input pInputText formControlName="phone" style="width: 150px;" type="tel" placeholder="+34 600 000 000" />
+        <p-checkbox formControlName="phoneIsWhatsApp" inputId="whatsappCheck" binary="true"></p-checkbox>
+        <label for="whatsappCheck" class="font-semibold">{{ 'SETTINGS.GENERAL.WHATSAPP' | translate }}</label>
+      </div>
+    </div>
+
+    <div class="field  mb-3 form-row margin-bottom">
+      <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.EMAIL' | translate }}</label>
+      <input pInputText formControlName="email" style="width: 255px;" type="email" />
+    </div>
+
+    <div class="field  mb-3 form-row margin-bottom">
+      <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.BACKGROUND_COLOR' | translate }}</label>
+      <input type="color" formControlName="backgroundColor" class="w-full" />
+    </div>
+
+    <div class="field  mb-3 form-row margin-bottom">
+      <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.HEADER_COLOR' | translate }}</label>
+      <input type="color" formControlName="headerColor" class="w-full" />
+    </div>
+
+    <div class="field mb-3 form-row margin-bottom">
+      <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.BUTTON_COLOR' | translate }}</label>
+      <input type="color" formControlName="buttonColor" class="w-full" />
+    </div>
+
+    <div class="field  mb-3 form-row margin-bottom">
+      <div class="image-upload-row">
+        <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.INFO_MARKER_ICON' | translate }}</label>
+        <button pButton type="button" class="p-button-secondary p-button-sm mt-2"
+          (click)="clearImage('infoMarkerIconBase64')" [label]="'SETTINGS.GENERAL.CLEAR_IMAGE' | translate">
+        </button>
+      </div>
+      <div class="image-upload-row">
+        <div class="image-preview icon mt-2">
+          <img [src]="infoMarkerIconPreview || noImageUri" alt="Info marker icon preview" />
+        </div>
+        <input type="file" accept="image/*" (change)="onImageChange($event, 'infoMarkerIconBase64')" />
+      </div>
+    </div>
+
+    <div class="field  mb-3 form-row margin-bottom">
+      <div class="image-upload-row">
+        <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.TOURIST_MARKER_ICON' | translate }}</label>
+        <button pButton type="button" class="p-button-secondary p-button-sm mt-2"
+          (click)="clearImage('touristMarkerIconBase64')" [label]="'SETTINGS.GENERAL.CLEAR_IMAGE' | translate">
+        </button>
+      </div>
+      <div class="image-upload-row">
+        <div class="image-preview icon mt-2">
+          <img [src]="touristMarkerIconPreview || noImageUri" alt="Tourist marker icon preview" />
+        </div>
+        <input type="file" accept="image/*" (change)="onImageChange($event, 'touristMarkerIconBase64')" />
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; justify-content: flex-end; align-items: center; gap: 0.75rem; margin-top: 1rem;">
+    <button pButton type="submit" [label]="'COMMON_LABELS.SAVE' | translate" icon="pi pi-save"
+      [disabled]="form.invalid"></button>
+  </div>
+</form>

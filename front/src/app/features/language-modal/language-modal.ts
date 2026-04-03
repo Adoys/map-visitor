@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { TableModule } from 'primeng/table';
@@ -9,7 +9,7 @@ import { ConfirmationService, MessageService } from 'primeng/api';
 import { LanguagesService } from './language.service';
 import { LanguageFormModalComponent } from './language-form-modal.component';
 import { Language } from './models/languages';
-import { ToastModule } from "primeng/toast";
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 
 @Component({
@@ -19,13 +19,15 @@ import { ToastModule } from "primeng/toast";
     TableModule,
     ButtonModule,
     ConfirmDialogModule,
-    ToastModule
+    TranslatePipe,
   ],
-  providers: [DialogService, ConfirmationService, MessageService],
+  providers: [],
   templateUrl: './language-modal.html',
   styleUrl: './language-modal.scss'
 })
 export class LanguageModal {
+  private translate = inject(TranslateService);
+
   languages: Language[] = [];
   loading = false;
   ref?: DynamicDialogRef | null;
@@ -45,13 +47,13 @@ export class LanguageModal {
     this.loading = true;
     this.langService.findAll().subscribe({
       next: (data) => { this.languages = data; this.loading = false; },
-      error: (err) => { console.error(err); this.loading = false; }
+      error: (err) => { this.loading = false; }
     });
   }
 
   openCreateModal() {
     this.ref = this.dialogService.open(LanguageFormModalComponent, {
-      header: 'Agregar idioma',
+      header: this.translate.instant('LANGUAGES.ADD'),
       width: 'auto',
       data: null
     });
@@ -60,7 +62,7 @@ export class LanguageModal {
 
   openEditModal(lang: Language) {
     this.ref = this.dialogService.open(LanguageFormModalComponent, {
-      header: 'Editar idioma',
+      header: this.translate.instant('LANGUAGES.EDIT'),
       width: 'auto',
       data: lang
     });
@@ -69,25 +71,25 @@ export class LanguageModal {
 
   confirmDelete(lang: Language) {
     this.confirmation.confirm({
-      message: `¿Eliminar el idioma "${lang.name}"?`,
-      acceptLabel: 'Sí',
-      rejectLabel: 'No',
+      message: this.translate.instant('LANGUAGES.CONFIRM_DELETE', { name: lang.name}),
+      acceptLabel: this.translate.instant('COMMON_LABELS.YES'),
+      rejectLabel: this.translate.instant('COMMON_LABELS.NO'),
       icon: 'pi pi-exclamation-triangle',
       accept: () => {
         this.langService.delete(lang.id).subscribe({
           next: () => {
             this.messageService.add({
               severity: 'success',
-              summary: 'Éxito',
-              detail: 'Idioma eliminado correctamente'
+              summary: this.translate.instant('COMMON_LABELS.SUCCESS'),
+              detail: this.translate.instant('COMMON_LABELS.DELETE_SUCCESS')
             });
             this.loadLanguages();
           },
           error: (err) => {
             this.messageService.add({
               severity: 'error',
-              summary: 'Error',
-              detail: err.error?.message || 'Error al eliminar el idioma'
+              summary: this.translate.instant('COMMON_LABELS.ERROR'),
+              detail: err.error?.message || this.translate.instant('LANGUAGES.DELETE_ERROR')
             });
           }
         });

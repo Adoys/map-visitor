@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { Observable } from 'rxjs';
 
 @Injectable({ providedIn: 'root' })
 export class LoginService {
@@ -70,5 +71,9 @@ export class LoginService {
 
     const now = Math.floor(Date.now() / 1000);
     return decoded.exp < now;
+  }
+
+  requestPasswordReset(username: string): Observable<any> {
+    return this.http.post('http://localhost:3000/auth/forgot-password', { username });
   }
 }

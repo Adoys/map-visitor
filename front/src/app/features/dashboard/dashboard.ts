@@ -21,9 +21,10 @@ import { AppHeader } from "../app-header/app-header";
 
 @Component({
   selector: 'app-dashboard',
-  imports: [BaseMapComponent, EditLayoutComponent, SlotsSelectorComponent, AppHeader],
+  imports: [BaseMapComponent, AppHeader],
   templateUrl: './dashboard.html',
-  styleUrl: './dashboard.scss'
+  styleUrl: './dashboard.scss',
+  providers: [],
 })
 export class DashboardComponent {
   /*

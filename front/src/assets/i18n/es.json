@@ -1,0 +1,130 @@
+{
+  "HEADER": {
+    "PHONE": "Teléfono",
+    "ADMIN_MENU": {
+      "USERS": "Usuarios",
+      "SETTINGS": "Configuración",
+      "LANGUAGES": "Idiomas",
+      "LOGOUT": "Salir"
+    },
+    "LANGUAGE_LABEL": "Idioma"
+  },
+  "DASHBOARD": {
+    "WELCOME": "Bienvenido"
+  },
+  "USERS": {
+    "ADD_USER": "Agregar usuario",
+    "CHANGE_PASSWORD": "Cambiar contraseña",
+    "CONFIRM_DELETE": "¿Desea eliminar el usuario \"{{name}}\"?",
+    "CREATE_SUCCESS": "Usuario creado correctamente",
+    "DELETE_ERROR": "Error al eliminar el usuario",
+    "DELETE_SUCCESS": "Usuario eliminado correctamente",
+    "DELETE_USER": "Eliminar usuario",
+    "EDIT_USER": "Editar usuario",
+    "EMAIL": "Email",
+    "IDENTIFIER": "Identificador",
+    "IDENTIFIER_PLACEHOLDER": "Identificador para acceder",
+    "NAME": "Nombre",
+    "NEW_PASSWORD": "Nueva contraseña",
+    "PASSWORD": "Contraseña",
+    "PASSWORD_CHANGE_SUCCESS": "Contraseña cambiada correctamente",
+    "PASSWORD_CHANGE_ERROR": "Error al cambiar la contraseña",
+    "PASSWORD_CHANGE_DETAIL": "Contraseña de usuario \"{{name}}\" cambiada correctamente",
+    "ROLE": "Rol",
+    "ROLE_ADMIN": "Administrador",
+    "ROLE_SCREEN": "Punto de información",
+    "SAVE_ERROR": "Error al guardar el usuario",
+    "TITLE": "Gestión de Usuarios",
+    "UPDATE_SUCCESS": "Usuario actualizado correctamente"
+  },
+  "SETTINGS": {
+    "NOTIFICATIONS": "Notificaciones",
+    "SECURITY": "Seguridad",
+    "TAB_EMAIL": "Correo electrónico",
+    "TAB_GENERAL": "General",
+    "TITLE": "Configuración",
+    "GENERAL": {
+      "LOGO": "Logotipo de la empresa",
+      "PHONE": "Teléfono",
+      "WHATSAPP": "WhatsApp",
+      "EMAIL": "Correo electrónico",
+      "BACKGROUND_COLOR": "Color de fondo",
+      "HEADER_COLOR": "Color de cabecera",
+      "BUTTON_COLOR": "Color de botón",
+      "INFO_MARKER_ICON": "Icono marcador de información",
+      "TOURIST_MARKER_ICON": "Icono marcador turístico",
+      "FILE_MUST_BE_IMAGE": "El archivo debe ser una imagen.",
+      "CLEAR_IMAGE": "Limpiar imagen",
+      "SAVE_SUCCESS": "Configuración guardada correctamente",
+      "SAVE_ERROR": "Se ha producido un error al guardar la configuración",
+      "IMAGE_COMPRESSED_SUCCESS": "Imagen comprimida correctamente",
+      "IMAGE_SIZE_TOO_LARGE": "La imagen sigue demasiado grande tras la compresión",
+      "IMAGE_TOTAL_TOO_LARGE": "El tamaño total de las imágenes excede el límite permitido"
+    },
+    "EMAIL": {
+      "HOST": "Host",
+      "PORT": "Puerto",
+      "SECURITY": "Seguridad",
+      "EMAIL_FROM": "Email",
+      "USERNAME": "Usuario",
+      "PASSWORD": "Contraseña",
+      "TEST_BUTTON": "Probar SMTP",
+      "TEST_EMAIL": "Correo electrónico de destino",
+      "TEST_TITLE": "Probar SMTP",
+      "CREATE_SUCCESS": "Información de SMTP guardada correctamente",
+      "CREATE_ERROR": "Se ha producido un error al guardar la información",
+      "TEST_SUCCESS": "Correo electrónico de prueba enviado correctamente",
+      "TEST_ERROR": "Se ha producido un error enviando el correo electrónico"
+    }
+  },
+  "LANGUAGES": {
+    "ADD": "Agregar idioma",
+    "CODE": "Código",
+    "CONFIRM_DELETE": "¿Desea eliminar el idioma \"{{name}}\"?",
+    "CREATE_SUCCESS": "Idioma creado correctamente",
+    "DEFAULT_LABEL": "Establecer como idioma por defecto",
+    "DEFAULT": "Por defecto",
+    "DELETE_ERROR": "Error al eliminar el idioma",
+    "DELETE_SUCCESS": "Idioma eliminado correctamente",
+    "DELETE": "Eliminar idioma",
+    "EDIT": "Editar idioma",
+    "FLAG": "Bandera",
+    "LANGUAGE_ENUM": "Español, Inglés...",
+    "NAME": "Nombre",
+    "SAVE_ERROR": "Error al guardar el idioma",
+    "SELECT_FLAG": "Seleccionar bandera",
+    "TITLE": "Gestión de Idiomas",
+    "UPDATE_SUCCESS": "Idioma actualizado correctamente"
+  },
+  "LOGIN": {
+    "TITLE": "Bienvenido",
+    "SUB_TITLE": "Inicia sesión para continuar",
+    "USER": "Usuario",
+    "PASSWORD": "Contraseña",
+    "PASSWORD_PLACEHOLDER": "Introduce tu contraseña",
+    "LOGIN_BUTTON": "Iniciar sesión",
+    "RETURN_BUTTON": "Volver",
+    "RECOVER_PASSWORD": "¿Olvidaste tu contraseña?",
+    "RECOVER_USERNAME_REQUIRED": "Por favor introduce el usuario para recuperar la contraseña",
+    "RECOVER_PASSWORD_SUCCESS": "Correo de recuperación enviado correctamente. Revisa tu bandeja.",
+    "RECOVER_PASSWORD_ERROR": "No se pudo enviar el correo de recuperación. Intenta de nuevo.",
+    "LOGIN_ERROR": "Error al iniciar sesión"
+  },
+  "COMMON_LABELS": {
+    "ACTIONS": "Acciones",
+    "YES": "Sí",
+    "NO": "No",
+    "CANCEL": "Cancelar",
+    "SAVE": "Guardar",
+    "TEST": "Probar",
+    "SUCCESS": "Éxito",
+    "ERROR": "Error",
+    "UNKNOWN_ERROR": "Error desconocido. Intentalo de nuevo más tarde."
+  },
+  "UNAUTHORIZED": {
+    "TITLE": "No autorizado",
+    "MESSAGE": "No tienes permiso para acceder a esta página.",
+    "RETURN_BUTTON": "Volver al inicio",
+    "CONTACT_ADMIN": "Tu cuenta está autenticada, pero no dispone de los permisos necesarios para ver esta sección.\nSi crees que se trata de un error, contacta con el administrador."
+  }
+}
