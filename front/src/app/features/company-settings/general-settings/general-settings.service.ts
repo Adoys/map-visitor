@@ -76,4 +76,8 @@ export class GeneralSettingsService {
   getPhone(): string | null {
     return this.settings()?.phone ?? null;
   }
+
+  isPhoneWhatsApp(): boolean {
+    return this.settings()?.phoneIsWhatsApp ?? false;
+  }
 }

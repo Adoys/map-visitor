@@ -2,31 +2,41 @@
   display: flex;
   align-items: center;
   gap: 20px;
-  padding: 12px 24px;
+  padding: 0 24px;
   background: #fff;
   border-bottom: 1px solid #e5e5e5;
   height: 50px;
+  justify-content: center
 }
 
 .logo {
-  width: 42px;
-  height: 42px;
+  width: auto;
+  margin-top: 5px;
+  height: 45px;
   object-fit: contain;
 }
 
 .phone {
   color: #333;
   text-decoration: none;
-  font-size: 14px;
+  font-size: 25px;
 
   &:hover {
     text-decoration: underline;
   }
 }
 
+.pi-whatsapp {
+  font-size: 1.5rem;
+}
+
 .flag {
   position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   right: 10px;
+  align-content: center;
 
   img {
     width: 28px;
@@ -36,7 +46,7 @@
 
   label {
     text-align: center;
-    
+
   }
 }
 

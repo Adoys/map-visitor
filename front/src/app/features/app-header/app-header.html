@@ -1,26 +1,36 @@
 <header class="app-header gradient-background">
-
     <!-- Botón admin -->
     @if(auth.isAdmin()) {
-    <p-splitButton [model]="adminMenu" icon="pi pi-bars" class="admin-menu-button">
-    </p-splitButton>
+    <div style="position:absolute; left: 10px;">
+        <p-splitButton [model]="adminMenu" icon="pi pi-bars" class="admin-menu-button">
+        </p-splitButton>
+    </div>
     }
 
     <!-- Logo (solo si existe) -->
     @if (company.getLogo()) {
-    <img [src]="company.getLogo()" alt="Logo" class="logo" />
-    }
-
-    <!-- Teléfono -->
-    @if(company.getPhone()) {
-    <a class="phone" [href]="getTranslateService().instant('HEADER.PHONE') + company.getPhone()">
-        {{ company.getPhone() }}
-    </a>
+    <div>
+        <img [src]="company.getLogo()" alt="Logo" class="logo" />
+    </div>
     }
 
     <!-- Idioma actual -->
     @if(languages.length) {
     <div class="flag">
+        <!-- Teléfono -->
+        @if(company.getPhone()) {
+        <div>
+            <a class="phone">
+                {{ company.getPhone() }}
+            </a>
+            @if(company.isPhoneWhatsApp()) {
+            <span class="whatsapp-icon">
+                <i class="pi pi-whatsapp" style="color:green"></i>
+            </span>
+            }
+        </div>
+        }
+
         <p-select [options]="languages" [(ngModel)]="selectedLanguage" (onChange)="languageChange()"
             style="min-width: 200px;" class="w-full" optionValue="code" optionLabel="name"
             placeholder="{{ 'HEADER.LANGUAGE_LABEL' | translate }}">
@@ -48,5 +58,4 @@
         </p-select>
     </div>
     }
-
 </header>

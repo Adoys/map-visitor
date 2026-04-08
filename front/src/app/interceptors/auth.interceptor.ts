@@ -1,14 +1,33 @@
 import { inject } from '@angular/core';
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { LoginService } from '../features/login/login.service';
-import { tap } from 'rxjs';
+import { tap, throwError } from 'rxjs';
 import { MessageService } from 'primeng/api';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(LoginService);
   const messageService = inject(MessageService);
+
   if (req.url.includes('/auth/login')) {
     return next(req);
+  }
+
+  // Verificar proactivamente si el token está expirado ANTES de enviar la petición
+  if (!auth.isAuthenticated()) {
+    auth.logout();
+    auth.sendToMap();
+
+    messageService.add({
+      severity: 'warn',
+      summary: 'Sesión caducada/invalida',
+      detail: 'Tu sesión ha expirado. Vuelve a iniciar sesión.',
+    });
+
+    return throwError(() => new HttpErrorResponse({
+      status: 401,
+      statusText: 'Unauthorized',
+      error: 'Token expirado'
+    }));
   }
 
   const token = auth.getToken();
