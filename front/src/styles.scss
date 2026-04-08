@@ -1,23 +1,45 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'primeicons/primeicons.css';
 
+:root {
+  --app-background-color: #f4f4f4;
+  --app-header-color: #ffffff;
+  --app-header-text-color: #111827;
+  --app-button-color: #2563eb;
+  --app-button-hover-color: #1d4ed8;
+  --app-button-text-color: #f9fafb;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
   overflow: hidden;
   height: 100%;
-
+  background-color: var(--app-background-color);
 }
 
 .gradient-background {
-  background: #bdc2e8;
-  background: linear-gradient(to right,
-      #bdc2e8, #d7d9eb, #e6dee9);
+  background: var(--app-header-color);
 }
 
 .div-separator {
   border-bottom: 1px solid #cacaca;
   height: 5px;
   margin-bottom: 10px;
+}
+
+.p-button:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info),
+.p-splitbutton .p-button {
+  background: var(--app-button-color) !important;
+  border-color: var(--app-button-color) !important;
+  color: var(--app-button-text-color) !important;
+}
+
+.p-button:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info):enabled:hover,
+.p-button:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info):enabled:active,
+.p-splitbutton .p-button:enabled:hover,
+.p-splitbutton .p-button:enabled:active {
+  background: var(--app-button-hover-color) !important;
+  border-color: var(--app-button-hover-color) !important;
 }

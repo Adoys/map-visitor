@@ -1,21 +1,32 @@
-<!-- 
- 
-<div #map class="card" (drop)="onDrop($event)" (dragover)="onDragOver($event)">
-  @if (showContextMenu) {
-  <tg-context-menu
-    [menuElements]="menuSelected"
-    [mousePosition]="contextMenuPosition"
-    (optionSelected)="optionSelectedFromMenu($event)"
-  />
-  }
-  <tg-zoom-buttons [showZoomToolbar]="showZoomToolbar" (actionClickHandler)="clickOnButton($event)" />
+<div class="map-shell">
+  <div class="map-toolbar">
+    <span class="role-pill">{{ roleLabel }}</span>
+    <span class="map-hint">
+      @if (isAdmin) {
+        Click izquierdo para inspeccionar, click derecho para crear puntos.
+      } @else {
+        Click izquierdo para consultar informacion.
+      }
+    </span>
+  </div>
+
+  <div #mapHost class="map-host">
+    @if (showContextMenu) {
+      <div
+        class="context-menu"
+        [style.left.px]="contextMenuPosition.x"
+        [style.top.px]="contextMenuPosition.y"
+      >
+        @for (option of contextOptions; track option.type) {
+          <button type="button" class="context-menu__button" (click)="addPointFromContextMenu(option.type)">
+            {{ option.label }}
+          </button>
+        }
+      </div>
+    }
+
+    @if (!isReady) {
+      <div class="map-loading">Cargando mapa...</div>
+    }
+  </div>
 </div>
-
-@if (showChangeMap) {
-
-    <tg-map-selector (submitMap)="onSubmit($event)" (cancelMap)="onCancel()" />
-
-}-->
-
-
-<div #map class="card"></div>

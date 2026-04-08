@@ -3,10 +3,11 @@
   align-items: center;
   gap: 20px;
   padding: 0 24px;
-  background: #fff;
+  background: var(--app-header-color);
   border-bottom: 1px solid #e5e5e5;
   height: 50px;
-  justify-content: center
+  justify-content: center;
+  color: var(--app-header-text-color);
 }
 
 .logo {
@@ -17,7 +18,7 @@
 }
 
 .phone {
-  color: #333;
+  color: var(--app-header-text-color);
   text-decoration: none;
   font-size: 25px;
 
@@ -54,4 +55,10 @@
   font-size: 20px;
   cursor: pointer;
   padding: 8px;
+}
+
+:host ::ng-deep .admin-menu-button .p-button {
+  background: var(--app-button-color) !important;
+  border-color: var(--app-button-color) !important;
+  color: var(--app-button-text-color) !important;
 }

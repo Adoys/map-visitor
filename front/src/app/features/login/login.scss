@@ -3,8 +3,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: linear-gradient(135deg, #e0e0e0 0%, #cfcfcf 40%, #bfbfbf 100%);
-    background-blend-mode: overlay;
+    background: var(--app-background-color);
 }
 
 .login-card {
@@ -38,7 +37,7 @@
 
 .login-button {
     width: auto;
-    border-color: #4caf50;
+    border-color: var(--app-button-color);
 }
 
 .return-button {

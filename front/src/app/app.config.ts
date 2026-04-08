@@ -10,10 +10,14 @@ import { HttpClient, HttpClientModule, provideHttpClient, withInterceptors } fro
 import { authInterceptor } from './interceptors/auth.interceptor';
 import { MessageService } from 'primeng/api';
 import { GeneralSettingsService } from './features/company-settings/general-settings/general-settings.service';
-import { firstValueFrom } from 'rxjs';
+import { catchError, firstValueFrom, of } from 'rxjs';
 
 export function initializeSettings(settingsService: GeneralSettingsService) {
-  return () => firstValueFrom(settingsService.loadSettings());
+  return () => firstValueFrom(
+    settingsService.loadSettings().pipe(
+      catchError(() => of(null))
+    )
+  );
 }
 
 export const appConfig: ApplicationConfig = {
@@ -46,5 +50,4 @@ export const appConfig: ApplicationConfig = {
     }
   ]
 };
-
 

@@ -32,17 +32,14 @@ export class SocketService {
     if (!this.socket) return;
 
     this.socket.on('connect', () => {
-      console.log('Conectado a Socket.io');
       this.connected$.next(true);
     });
 
     this.socket.on('disconnect', () => {
-      console.log('Desconectado de Socket.io');
       this.connected$.next(false);
     });
 
     this.socket.on('settingsUpdated', (data) => {
-      console.log('Settings actualizados desde el servidor:', data);
       this.settingsUpdated$.next(data);
     });
 

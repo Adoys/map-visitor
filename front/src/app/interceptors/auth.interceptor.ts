@@ -1,47 +1,29 @@
 import { inject } from '@angular/core';
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { LoginService } from '../features/login/login.service';
-import { tap, throwError } from 'rxjs';
+import { tap } from 'rxjs';
 import { MessageService } from 'primeng/api';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(LoginService);
   const messageService = inject(MessageService);
 
-  if (req.url.includes('/auth/login')) {
+  if (req.url.includes('/auth/login') || req.url.includes('/auth/forgot-password')) {
     return next(req);
   }
 
-  // Verificar proactivamente si el token está expirado ANTES de enviar la petición
-  if (!auth.isAuthenticated()) {
-    auth.logout();
-    auth.sendToMap();
-
-    messageService.add({
-      severity: 'warn',
-      summary: 'Sesión caducada/invalida',
-      detail: 'Tu sesión ha expirado. Vuelve a iniciar sesión.',
-    });
-
-    return throwError(() => new HttpErrorResponse({
-      status: 401,
-      statusText: 'Unauthorized',
-      error: 'Token expirado'
-    }));
-  }
-
   const token = auth.getToken();
+  const hasValidToken = token && auth.isAuthenticated();
 
-  const cloned = token
+  const cloned = hasValidToken
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
     : req;
 
   return next(cloned).pipe(
     tap({
       error: (err: HttpErrorResponse) => {
-        if (err.status === 401) {
+        if (err.status === 401 && token) {
           auth.logout();
-          auth.sendToMap();
 
           messageService.add({
             severity: 'warn',
@@ -73,4 +55,3 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     }),
   );
 };
-
