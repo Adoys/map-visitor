@@ -3,6 +3,8 @@ export interface CompanySettings {
   logoBase64?: string | null;
   mapImageUrl?: string | null;
   mapImageBase64?: string | null;
+  mapWidth?: number | null;
+  mapHeight?: number | null;
   phone?: string | null;
   phoneIsWhatsApp?: boolean | null;
   email?: string | null;

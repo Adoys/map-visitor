@@ -57,6 +57,8 @@ export class GeneralSettings implements OnInit {
       backgroundColor: ['#ffffff', Validators.required],
       headerColor: ['#ffffff', Validators.required],
       buttonColor: ['#000000', Validators.required],
+      mapWidth: [null, [Validators.min(1)]],
+      mapHeight: [null, [Validators.min(1)]],
       infoMarkerIconBase64: [null],
       touristMarkerIconBase64: [null],
     });
@@ -75,6 +77,8 @@ export class GeneralSettings implements OnInit {
           backgroundColor: settings.backgroundColor ?? '#ffffff',
           headerColor: settings.headerColor ?? '#ffffff',
           buttonColor: settings.buttonColor ?? '#000000',
+          mapWidth: settings.mapWidth ?? null,
+          mapHeight: settings.mapHeight ?? null,
           infoMarkerIconBase64: settings.infoMarkerIconBase64 ?? null,
           touristMarkerIconBase64: settings.touristMarkerIconBase64 ?? null,
         });
@@ -300,6 +304,8 @@ export class GeneralSettings implements OnInit {
       backgroundColor: values.backgroundColor,
       headerColor: values.headerColor,
       buttonColor: values.buttonColor,
+      mapWidth: values.mapWidth ? Number(values.mapWidth) : null,
+      mapHeight: values.mapHeight ? Number(values.mapHeight) : null,
     };
 
     const logoBytes = values.logoBase64 ? this.getBase64SizeBytes(values.logoBase64) : 0;
@@ -352,5 +358,4 @@ export class GeneralSettings implements OnInit {
     }
   }
 }
-
 

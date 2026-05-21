@@ -48,6 +48,26 @@
       <input type="color" formControlName="buttonColor" class="w-full" />
     </div>
 
+    <div class="field mb-3 form-row margin-bottom map-size-row">
+      <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.MAP_SIZE' | translate }}</label>
+      <div class="map-size-inputs">
+        <input
+          pInputText
+          formControlName="mapWidth"
+          type="number"
+          min="1"
+          [placeholder]="'SETTINGS.GENERAL.MAP_WIDTH' | translate"
+        />
+        <input
+          pInputText
+          formControlName="mapHeight"
+          type="number"
+          min="1"
+          [placeholder]="'SETTINGS.GENERAL.MAP_HEIGHT' | translate"
+        />
+      </div>
+    </div>
+
     <div class="field  mb-3 form-row margin-bottom">
       <div class="image-upload-row">
         <label class="font-semibold mb-1 block">{{ 'SETTINGS.GENERAL.INFO_MARKER_ICON' | translate }}</label>

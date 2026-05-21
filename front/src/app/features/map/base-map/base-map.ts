@@ -12,7 +12,7 @@ import {
 } from '@angular/core';
 import { DialogService } from 'primeng/dynamicdialog';
 import { MessageService } from 'primeng/api';
-import { Application, Container, FederatedPointerEvent, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, Sprite, Texture } from 'pixi.js';
 import { GeneralSettingsService } from '../../company-settings/general-settings/general-settings.service';
 import { LoginService } from '../../login/login.service';
 import { PointOfInterestModalComponent } from '../point-of-interest-modal/point-of-interest-modal.component';
@@ -31,7 +31,7 @@ interface MapPoint {
 
 interface PointMenuOption {
   label: string;
-  action: 'create-interest' | 'create-info' | 'change-map-image';
+  action: 'create-interest' | 'create-info' | 'change-map-image' | 'delete-point';
 }
 
 interface LoadedMarkerIcons {
@@ -60,10 +60,13 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private readonly dialogService = inject(DialogService);
   private readonly mapImageInput = viewChild<ElementRef<HTMLInputElement>>('mapImageInput');
 
-  protected readonly contextOptions: PointMenuOption[] = [
+  private readonly mapContextOptions: PointMenuOption[] = [
     { label: 'Crear punto de interes', action: 'create-interest' },
     { label: 'Crear punto de informacion', action: 'create-info' },
     { label: 'Cambiar imagen del mapa', action: 'change-map-image' },
+  ];
+  private readonly pointContextOptions: PointMenuOption[] = [
+    { label: 'Eliminar punto', action: 'delete-point' },
   ];
 
   protected showContextMenu = false;
@@ -76,16 +79,20 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private readonly pointsLayer = new Container({ label: 'points-layer' });
 
   private resizeObserver?: ResizeObserver;
-  private mapWidth = 1600;
-  private mapHeight = 900;
+  private readonly defaultMapWidth = 1600;
+  private readonly defaultMapHeight = 900;
+  private mapWidth = this.defaultMapWidth;
+  private mapHeight = this.defaultMapHeight;
   private nextPointId = 5;
   private mapBackgroundTexture: Texture | null = null;
+  private hasConfiguredMapSize = false;
   private markerIcons: LoadedMarkerIcons = { interest: null, info: null };
   private isDragging = false;
   private blockNextTap = false;
   private dragStartPointer = { x: 0, y: 0 };
   private dragStartViewport = { x: 0, y: 0 };
   private contextWorldPosition = { x: 0, y: 0 };
+  private contextPointId: string | null = null;
   private hasFittedViewport = false;
   private activePointerType = 'mouse';
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -162,7 +169,21 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     return this.auth.userRole() === 'screen';
   }
 
+  protected get contextOptions(): PointMenuOption[] {
+    return this.contextPointId ? this.pointContextOptions : this.mapContextOptions;
+  }
+
   protected async onContextMenuAction(action: PointMenuOption['action']): Promise<void> {
+    if (!this.isAdmin) {
+      this.hideContextMenu();
+      return;
+    }
+
+    if (action === 'delete-point') {
+      this.deleteContextPoint();
+      return;
+    }
+
     if (action === 'change-map-image') {
       this.hideContextMenu();
       this.mapImageInput()?.nativeElement.click();
@@ -246,6 +267,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
   protected hideContextMenu(): void {
     this.showContextMenu = false;
+    this.contextPointId = null;
   }
 
   updateElement(): void {}
@@ -282,16 +304,33 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     this.mapLayer.removeChildren();
 
     if (this.mapBackgroundTexture) {
+      const background = new Graphics();
+      background.roundRect(0, 0, this.mapWidth, this.mapHeight, 28);
+      background.fill(0xf8fafc);
+
       const sprite = new Sprite(this.mapBackgroundTexture);
+      const imageSize = this.hasConfiguredMapSize
+        ? { width: this.mapWidth, height: this.mapHeight }
+        : this.getContainedImageSize(
+            this.mapBackgroundTexture.width,
+            this.mapBackgroundTexture.height,
+            this.mapWidth,
+            this.mapHeight
+          );
+
       sprite.anchor.set(0);
-      sprite.width = this.mapWidth;
-      sprite.height = this.mapHeight;
+      sprite.width = imageSize.width;
+      sprite.height = imageSize.height;
+      sprite.position.set(
+        (this.mapWidth - imageSize.width) / 2,
+        (this.mapHeight - imageSize.height) / 2
+      );
 
       const border = new Graphics();
       border.roundRect(0, 0, this.mapWidth, this.mapHeight, 28);
       border.stroke({ color: 0xcbd5e1, width: 4 });
 
-      this.mapLayer.addChild(sprite, border);
+      this.mapLayer.addChild(background, sprite, border);
       return;
     }
 
@@ -400,19 +439,6 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       marker.addChild(ring, pin, inner);
     }
 
-    const label = new Text({
-      text: point.label,
-      style: {
-        fill: 0x0f172a,
-        fontSize: 15,
-        fontFamily: 'Arial',
-        fontWeight: point.type === 'current-info' ? '700' : '500',
-      },
-    });
-    label.anchor.set(0.5, 0);
-    label.position.set(0, 28);
-
-    marker.addChild(label);
     marker.on('pointertap', (event: FederatedPointerEvent) => {
       if (event.button !== 0 || this.blockNextTap) {
         this.blockNextTap = false;
@@ -475,7 +501,6 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     );
 
     this.app.canvas.addEventListener('contextmenu', (event) => {
-      event.preventDefault();
       this.handleContextMenu(event);
     });
 
@@ -553,13 +578,41 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleContextMenu(event: MouseEvent): void {
+    event.preventDefault();
+
     if (!this.isAdmin) {
-      this.showContextMenu = false;
+      this.hideContextMenu();
       return;
     }
 
     const hostRect = this.mapHost().nativeElement.getBoundingClientRect();
     this.openContextMenuAt(event.clientX - hostRect.left, event.clientY - hostRect.top);
+  }
+
+  private deleteContextPoint(): void {
+    if (!this.contextPointId) {
+      this.hideContextMenu();
+      return;
+    }
+
+    const pointIndex = this.basePoints.findIndex((point) => point.id === this.contextPointId);
+    if (pointIndex === -1) {
+      this.hideContextMenu();
+      return;
+    }
+
+    const [deletedPoint] = this.basePoints.splice(pointIndex, 1);
+    this.renderPoints();
+    this.hideContextMenu();
+
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Punto eliminado',
+      detail:
+        deletedPoint.type === 'interest'
+          ? 'Se ha eliminado el punto de interes.'
+          : 'Se ha eliminado el punto de informacion.',
+    });
   }
 
   private toWorldCoordinates(screenX: number, screenY: number) {
@@ -593,8 +646,71 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     const assets = await this.loadMapAssets();
     this.mapBackgroundTexture = assets.background;
     this.markerIcons = assets.markers;
+    this.updateMapDimensions();
     this.createMapBackground();
     this.renderPoints();
+  }
+
+  private updateMapDimensions(): void {
+    const settings = this.settings.settings();
+    const configuredWidth = this.getPositiveNumber(settings?.mapWidth);
+    const configuredHeight = this.getPositiveNumber(settings?.mapHeight);
+    const naturalWidth = this.getPositiveNumber(this.mapBackgroundTexture?.width);
+    const naturalHeight = this.getPositiveNumber(this.mapBackgroundTexture?.height);
+
+    if (configuredWidth && configuredHeight) {
+      this.mapWidth = configuredWidth;
+      this.mapHeight = configuredHeight;
+      this.hasConfiguredMapSize = true;
+      return;
+    }
+
+    this.hasConfiguredMapSize = false;
+
+    if (this.mapBackgroundTexture && naturalWidth && naturalHeight) {
+      if (configuredWidth) {
+        this.mapWidth = configuredWidth;
+        this.mapHeight = Math.round(configuredWidth * (naturalHeight / naturalWidth));
+        return;
+      }
+
+      if (configuredHeight) {
+        this.mapHeight = configuredHeight;
+        this.mapWidth = Math.round(configuredHeight * (naturalWidth / naturalHeight));
+        return;
+      }
+
+      this.mapWidth = naturalWidth;
+      this.mapHeight = naturalHeight;
+      return;
+    }
+
+    this.mapWidth = configuredWidth ?? this.defaultMapWidth;
+    this.mapHeight = configuredHeight ?? this.defaultMapHeight;
+  }
+
+  private getPositiveNumber(value: unknown): number | null {
+    const numericValue = Number(value);
+
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      return null;
+    }
+
+    return numericValue;
+  }
+
+  private getContainedImageSize(
+    imageWidth: number,
+    imageHeight: number,
+    containerWidth: number,
+    containerHeight: number
+  ) {
+    const scale = Math.min(containerWidth / imageWidth, containerHeight / imageHeight);
+
+    return {
+      width: imageWidth * scale,
+      height: imageHeight * scale,
+    };
   }
 
   private async loadMapAssets(): Promise<LoadedMapAssets> {
@@ -664,13 +780,28 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private openContextMenuAt(screenX: number, screenY: number): void {
+    if (!this.isAdmin) {
+      this.hideContextMenu();
+      return;
+    }
+
     const hostRect = this.mapHost().nativeElement.getBoundingClientRect();
     this.contextMenuPosition = {
       x: screenX,
       y: screenY,
     };
     this.contextWorldPosition = this.toWorldCoordinates(screenX, screenY);
+    this.contextPointId =
+      this.getEditablePointAt(this.contextWorldPosition.x, this.contextWorldPosition.y)?.id ?? null;
     this.showContextMenu = true;
+  }
+
+  private getEditablePointAt(worldX: number, worldY: number): MapPoint | null {
+    const hitRadius = 38;
+
+    return (
+      this.basePoints.find((point) => Math.hypot(point.x - worldX, point.y - worldY) <= hitRadius) ?? null
+    );
   }
 
   private clearLongPressTimer(): void {
