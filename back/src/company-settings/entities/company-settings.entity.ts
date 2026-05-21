@@ -29,6 +29,12 @@ export class CompanySettings {
   @Column({ name: 'map_image_url', type: 'text', nullable: true })
   mapImageUrl?: string;
 
+  @Column({ name: 'map_width', type: 'int', nullable: true })
+  mapWidth?: number;
+
+  @Column({ name: 'map_height', type: 'int', nullable: true })
+  mapHeight?: number;
+
   @Column({ name: 'info_marker_icon_url', type: 'text', nullable: true })
   infoMarkerIconUrl?: string;
 

@@ -176,6 +176,8 @@ export class CompanySettingsService {
     if (dto.buttonColor !== undefined) payload.buttonColor = dto.buttonColor;
     if (dto.logoUrl !== undefined) payload.logoUrl = dto.logoUrl;
     if (dto.mapImageUrl !== undefined) payload.mapImageUrl = dto.mapImageUrl;
+    if (dto.mapWidth !== undefined) payload.mapWidth = dto.mapWidth;
+    if (dto.mapHeight !== undefined) payload.mapHeight = dto.mapHeight;
     if (dto.infoMarkerIconUrl !== undefined) {
       payload.infoMarkerIconUrl = dto.infoMarkerIconUrl;
     }

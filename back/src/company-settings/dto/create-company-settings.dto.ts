@@ -1,4 +1,5 @@
-import { IsOptional, IsString, IsBoolean } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsBoolean, IsInt, Min } from 'class-validator';
 
 export class CreateCompanySettingsDto {
   @IsOptional()
@@ -40,6 +41,18 @@ export class CreateCompanySettingsDto {
   @IsOptional()
   @IsString()
   mapImageBase64?: string;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  mapWidth?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  mapHeight?: number;
 
   @IsOptional()
   @IsString()

@@ -17,6 +17,8 @@ CREATE TABLE company_settings (
 
     map_image_url TEXT NULL,
     map_image_base64 LONGTEXT NULL,
+    map_width INT NULL,
+    map_height INT NULL,
 
     info_marker_icon_url TEXT NULL,
     info_marker_icon_base64 LONGTEXT NULL,
