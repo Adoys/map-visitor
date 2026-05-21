@@ -40,6 +40,14 @@ export class CompanySettingsController {
     return this.service.uploadLogo(file);
   }
 
+  @Patch('map-image')
+  @Roles('admin')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseInterceptors(FileInterceptor('mapImage', { storage: memoryStorage() }))
+  uploadMapImage(@UploadedFile() file: Multer.File) {
+    return this.service.uploadMapImage(file);
+  }
+
   @Patch('info-marker-icon')
   @Roles('admin')
   @UseGuards(JwtAuthGuard, RolesGuard)

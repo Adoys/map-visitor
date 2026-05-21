@@ -26,6 +26,9 @@ export class CompanySettings {
   @Column({ name: 'logo_url', type: 'text', nullable: true })
   logoUrl?: string;
 
+  @Column({ name: 'map_image_url', type: 'text', nullable: true })
+  mapImageUrl?: string;
+
   @Column({ name: 'info_marker_icon_url', type: 'text', nullable: true })
   infoMarkerIconUrl?: string;
 

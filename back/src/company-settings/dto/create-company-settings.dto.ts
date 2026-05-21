@@ -35,6 +35,14 @@ export class CreateCompanySettingsDto {
 
   @IsOptional()
   @IsString()
+  mapImageUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  mapImageBase64?: string;
+
+  @IsOptional()
+  @IsString()
   infoMarkerIconUrl?: string;
 
   @IsOptional()

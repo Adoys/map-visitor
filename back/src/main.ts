@@ -7,14 +7,14 @@ import { ValidationPipe } from '@nestjs/common';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.useStaticAssets(join(__dirname, '..', 'public'), {
-    prefix: '/public/',
-  });
-
   // ✅ Habilitar CORS
   app.enableCors({
     origin: ['http://localhost:4200', 'http://127.0.0.1:4200'],
     credentials: true, // por si usas cookies o tokens con credenciales
+  });
+
+  app.useStaticAssets(join(__dirname, '..', 'public'), {
+    prefix: '/public/',
   });
 
   // Asegurar que exista la carpeta pública para subir archivos

@@ -119,6 +119,22 @@ export class CompanySettingsService {
     return this.repo.save({ logoUrl: url } as CompanySettings);
   }
 
+  async uploadMapImage(file: Multer.File): Promise<CompanySettings> {
+    const url = await this.saveFileImage(file, 'map-image');
+    const existing = await this.getSettings();
+
+    let updatedSettings: CompanySettings;
+    if (existing) {
+      existing.mapImageUrl = url;
+      updatedSettings = await this.repo.save(existing);
+    } else {
+      updatedSettings = await this.repo.save({ mapImageUrl: url } as CompanySettings);
+    }
+
+    this.notificationsGateway.emitSettingsUpdated(updatedSettings);
+    return updatedSettings;
+  }
+
   async uploadInfoMarkerIcon(file: Multer.File): Promise<CompanySettings> {
     const url = await this.saveFileImage(file, 'info-marker');
     const existing = await this.getSettings();
@@ -146,17 +162,26 @@ export class CompanySettingsService {
   private async prepareSettingsPayload(
     dto: CreateCompanySettingsDto | UpdateCompanySettingsDto,
   ): Promise<Partial<CompanySettings>> {
-    const payload: Partial<CompanySettings> = {
-      phone: dto.phone,
-      phoneIsWhatsApp: dto.phoneIsWhatsApp,
-      email: dto.email,
-      backgroundColor: dto.backgroundColor,
-      headerColor: dto.headerColor,
-      buttonColor: dto.buttonColor,
-      logoUrl: dto.logoUrl,
-      infoMarkerIconUrl: dto.infoMarkerIconUrl,
-      touristMarkerIconUrl: dto.touristMarkerIconUrl,
-    };
+    const payload: Partial<CompanySettings> = {};
+
+    if (dto.phone !== undefined) payload.phone = dto.phone;
+    if (dto.phoneIsWhatsApp !== undefined) {
+      payload.phoneIsWhatsApp = dto.phoneIsWhatsApp;
+    }
+    if (dto.email !== undefined) payload.email = dto.email;
+    if (dto.backgroundColor !== undefined) {
+      payload.backgroundColor = dto.backgroundColor;
+    }
+    if (dto.headerColor !== undefined) payload.headerColor = dto.headerColor;
+    if (dto.buttonColor !== undefined) payload.buttonColor = dto.buttonColor;
+    if (dto.logoUrl !== undefined) payload.logoUrl = dto.logoUrl;
+    if (dto.mapImageUrl !== undefined) payload.mapImageUrl = dto.mapImageUrl;
+    if (dto.infoMarkerIconUrl !== undefined) {
+      payload.infoMarkerIconUrl = dto.infoMarkerIconUrl;
+    }
+    if (dto.touristMarkerIconUrl !== undefined) {
+      payload.touristMarkerIconUrl = dto.touristMarkerIconUrl;
+    }
 
     const uploadDir = join(
       __dirname,
@@ -172,6 +197,14 @@ export class CompanySettingsService {
       payload.logoUrl = await this.saveBase64Image(
         dto.logoBase64,
         'logo',
+        uploadDir,
+      );
+    }
+
+    if (dto.mapImageBase64) {
+      payload.mapImageUrl = await this.saveBase64Image(
+        dto.mapImageBase64,
+        'map-image',
         uploadDir,
       );
     }
