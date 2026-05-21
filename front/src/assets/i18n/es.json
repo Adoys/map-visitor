@@ -12,8 +12,15 @@
   "DASHBOARD": {
     "WELCOME": "Bienvenido"
   },
-  "USERS": {
-    "ADD_USER": "Agregar usuario",
+  "USERS": {},
+  "MAP": {
+    "INFO_SCREEN": "Pantalla de información",
+    "YOU_ARE_HERE": "Usted está aquí",
+    "DUPLICATE_INFO": "Usuario ya asignado",
+    "DUPLICATE_INFO_DETAIL": "No se puede agregar dos veces el mismo punto de información.",
+    "INFO_ADDED": "Se ha colocado un nuevo punto de información en el mapa.",
+    "INTEREST_ADDED": "Se ha colocado un nuevo punto de interés en el mapa.",
+    "SELECT_INFO_USER": "Seleccionar usuario de punto de información""ADD_USER": "Agregar usuario",
     "CHANGE_PASSWORD": "Cambiar contraseña",
     "CONFIRM_DELETE": "¿Desea eliminar el usuario \"{{name}}\"?",
     "CREATE_SUCCESS": "Usuario creado correctamente",

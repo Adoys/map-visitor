@@ -6,13 +6,8 @@
     <button type="button" class="map-control-button" (click)="zoomOut()" aria-label="Reducir mapa" title="Reducir">
       &minus;
     </button>
-    <button
-      type="button"
-      class="map-control-button map-control-button--reset"
-      (click)="resetZoom()"
-      aria-label="Restablecer zoom"
-      title="Restablecer zoom"
-    >
+    <button type="button" class="map-control-button map-control-button--reset" (click)="resetZoom()"
+      aria-label="Restablecer zoom" title="Restablecer zoom">
       <span class="pi pi-home" aria-hidden="true"></span>
     </button>
   </div>
@@ -21,21 +16,17 @@
     <input #mapImageInput type="file" accept="image/*" class="map-image-input" (change)="onMapImageSelected($event)" />
 
     @if (showContextMenu) {
-      <div
-        class="context-menu"
-        [style.left.px]="contextMenuPosition.x"
-        [style.top.px]="contextMenuPosition.y"
-      >
-        @for (option of contextOptions; track option.action) {
-          <button type="button" class="context-menu__button" (click)="onContextMenuAction(option.action)">
-            {{ option.label }}
-          </button>
-        }
-      </div>
+    <div class="context-menu" [style.left.px]="contextMenuPosition.x" [style.top.px]="contextMenuPosition.y">
+      @for (option of contextOptions; track option.action) {
+      <button type="button" class="context-menu__button" (click)="onContextMenuAction(option.action)">
+        {{ option.label | translate }}
+      </button>
+      }
+    </div>
     }
 
     @if (!isReady) {
-      <div class="map-loading">Cargando mapa...</div>
+    <div class="map-loading">Cargando mapa...</div>
     }
   </div>
 </div>

@@ -17,6 +17,8 @@ import { GeneralSettingsService } from '../../company-settings/general-settings/
 import { LoginService } from '../../login/login.service';
 import { PointOfInterestModalComponent } from '../point-of-interest-modal/point-of-interest-modal.component';
 import { firstValueFrom } from 'rxjs';
+import { UserService } from '../../user-modal/user.service';
+import { User } from '../../user-modal/models/users';
 
 type MapPointType = 'interest' | 'info' | 'current-info';
 
@@ -51,6 +53,11 @@ interface LoadedMapAssets {
   styleUrl: './base-map.scss',
 })
 export class BaseMapComponent implements AfterViewInit, OnDestroy {
+  // Usuarios de punto de información
+  protected infoPointUsers: User[] = [];
+  protected usedInfoPointUserIds: Set<number> = new Set();
+  protected selectedInfoPointUserId: number | null = null;
+  private readonly userService = inject(UserService);
   private readonly mapHost = viewChild.required<ElementRef<HTMLDivElement>>('mapHost');
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
@@ -61,12 +68,12 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private readonly mapImageInput = viewChild<ElementRef<HTMLInputElement>>('mapImageInput');
 
   private readonly mapContextOptions: PointMenuOption[] = [
-    { label: 'Crear punto de interes', action: 'create-interest' },
-    { label: 'Crear punto de informacion', action: 'create-info' },
-    { label: 'Cambiar imagen del mapa', action: 'change-map-image' },
+    { label: 'MAP.CREATE_INTEREST', action: 'create-interest' },
+    { label: 'MAP.CREATE_INFO', action: 'create-info' },
+    { label: 'MAP.CHANGE_IMAGE', action: 'change-map-image' },
   ];
   private readonly pointContextOptions: PointMenuOption[] = [
-    { label: 'Eliminar punto', action: 'delete-point' },
+    { label: 'MAP.DELETE_POINT', action: 'delete-point' },
   ];
 
   protected showContextMenu = false;
@@ -191,6 +198,69 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     }
 
     const type = action === 'create-interest' ? 'interest' : 'info';
+
+    if (type === 'info') {
+      // Cargar usuarios tipo SCREEN y mostrar dropdown
+      this.userService.findAll().subscribe((users) => {
+        this.infoPointUsers = users.filter(u => u.role === 'SCREEN');
+        // Marcar los ya usados
+        this.usedInfoPointUserIds = new Set(this.basePoints.filter(p => p.type === 'info' && (p as any).userId).map((p: any) => p.userId));
+        this.selectedInfoPointUserId = null;
+        // Mostrar prompt simple (puedes reemplazar por modal custom)
+        const disponibles = this.infoPointUsers.filter(u => !this.usedInfoPointUserIds.has(u.id));
+        if (disponibles.length === 0) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Sin usuarios disponibles',
+            detail: 'No hay usuarios de punto de información disponibles.',
+          });
+          this.hideContextMenu();
+          return;
+        }
+        const nombre = prompt('Seleccione el usuario de punto de información (userId):\n' + disponibles.map(u => u.userId).join(', '));
+        const user = disponibles.find(u => u.userId === nombre);
+        if (!user) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Usuario no válido',
+            detail: 'Debe seleccionar un usuario válido.',
+          });
+          this.hideContextMenu();
+          return;
+        }
+        // Validar duplicado
+        if (this.basePoints.some((p: any) => p.type === 'info' && (p as any).userId === user.id)) {
+          this.messageService.add({
+            severity: 'warn',
+            summary: 'Usuario ya asignado',
+            detail: 'No se puede agregar dos veces el mismo punto de información.',
+          });
+          this.hideContextMenu();
+          return;
+        }
+        // Crear punto de información
+        const point: MapPoint & { userId: number } = {
+          id: `info-${user.id}`,
+          label: user.userId,
+          description: `Usuario de punto de información: ${user.userId}`,
+          type: 'info',
+          x: this.contextWorldPosition.x,
+          y: this.contextWorldPosition.y,
+          userId: user.id,
+        };
+        this.basePoints.push(point);
+        this.renderPoints();
+        this.hideContextMenu();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Elemento creado',
+          detail: 'Se ha colocado un nuevo punto de información en el mapa.',
+        });
+      });
+      return;
+    }
+
+    // Para interest, flujo normal
     const point: MapPoint = {
       id: `${type}-${this.nextPointId++}`,
       label: type === 'interest' ? 'Nuevo punto de interes' : 'Nuevo punto de informacion',
@@ -206,14 +276,12 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     this.basePoints.push(point);
     this.renderPoints();
     this.hideContextMenu();
-
     this.messageService.add({
       severity: 'success',
       summary: 'Elemento creado',
-      detail:
-        type === 'interest'
-          ? 'Se ha colocado un nuevo punto de interes en el mapa.'
-          : 'Se ha colocado un nuevo punto de informacion en el mapa.',
+      detail: type === 'interest'
+        ? 'Se ha colocado un nuevo punto de interes en el mapa.'
+        : 'Se ha colocado un nuevo punto de informacion en el mapa.',
     });
   }
 
@@ -270,11 +338,11 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     this.contextPointId = null;
   }
 
-  updateElement(): void {}
+  updateElement(): void { }
 
-  serializeMap(): void {}
+  serializeMap(): void { }
 
-  setSlotsDecoration(): void {}
+  setSlotsDecoration(): void { }
 
   private async initPixiApp(): Promise<void> {
     const host = this.mapHost().nativeElement;
@@ -312,11 +380,11 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       const imageSize = this.hasConfiguredMapSize
         ? { width: this.mapWidth, height: this.mapHeight }
         : this.getContainedImageSize(
-            this.mapBackgroundTexture.width,
-            this.mapBackgroundTexture.height,
-            this.mapWidth,
-            this.mapHeight
-          );
+          this.mapBackgroundTexture.width,
+          this.mapBackgroundTexture.height,
+          this.mapWidth,
+          this.mapHeight
+        );
 
       sprite.anchor.set(0);
       sprite.width = imageSize.width;
@@ -404,9 +472,14 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     const inner = new Graphics();
     const markerTexture = this.getMarkerTexture(point.type);
 
+    // Si es el punto logueado, color rojo
+    const isLoggedInfoPoint = point.type === 'info' && (point as any).userId === this.auth.userId();
     if (point.type === 'current-info') {
       ring.circle(0, 0, 32).fill({ color: 0xfef08a, alpha: 0.85 });
       ring.stroke({ color: 0xf59e0b, width: 4 });
+    } else if (isLoggedInfoPoint) {
+      ring.circle(0, 0, 22).fill({ color: 0xff0000, alpha: 0.85 });
+      ring.stroke({ color: 0x7c2d12, width: 4 });
     } else {
       ring.circle(0, 0, point.type === 'interest' ? 24 : 22).fill({
         color: point.type === 'interest' ? 0xffedd5 : 0xdbeafe,
@@ -453,6 +526,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   }
 
   private handlePointClick(point: MapPoint): void {
+    // Si es punto de interés normal
     if (point.type === 'interest') {
       this.dialogService.open(PointOfInterestModalComponent, {
         header: point.label,
@@ -464,20 +538,35 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    if (point.type === 'current-info') {
+    // Si es punto de información logueado
+    if (point.type === 'info' && (point as any).userId === this.auth.userId()) {
       this.messageService.add({
         severity: 'info',
-        summary: 'Posicion actual',
-        detail: 'Usted esta aqui.',
+        summary: 'Usted está aquí',
+        detail: 'Usted está aquí',
       });
       return;
     }
 
-    this.messageService.add({
-      severity: 'info',
-      summary: 'Punto de informacion',
-      detail: 'Punto de informacion',
-    });
+    // Si es cualquier otro punto de información
+    if (point.type === 'info') {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Pantalla de información',
+        detail: 'Pantalla de información',
+      });
+      return;
+    }
+
+    // Si es el punto de posición actual
+    if (point.type === 'current-info') {
+      this.messageService.add({
+        severity: 'info',
+        summary: 'Usted está aquí',
+        detail: 'Usted está aquí',
+      });
+      return;
+    }
   }
 
   private registerStageEvents(): void {
