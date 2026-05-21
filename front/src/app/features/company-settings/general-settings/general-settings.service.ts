@@ -50,6 +50,15 @@ export class GeneralSettingsService {
     );
   }
 
+  uploadMapImage(imageBlob: Blob) {
+    const formData = new FormData();
+    formData.append('mapImage', imageBlob, 'map-image.png');
+
+    return this.http.patch<CompanySettings>(`${this.api}/map-image`, formData).pipe(
+      tap((res) => this.mergeSettings(res))
+    );
+  }
+
   uploadInfoMarkerIcon(imageBlob: Blob) {
     const formData = new FormData();
     formData.append('infoMarkerIcon', imageBlob, 'info-marker-icon.png');
@@ -72,10 +81,28 @@ export class GeneralSettingsService {
     const s = this.settings();
     if (!s) return null;
 
-    if (s.logoUrl) return s.logoUrl;
-    if (s.logoBase64) return s.logoBase64.startsWith('data:') ? s.logoBase64 : `data:image/png;base64,${s.logoBase64}`;
+    return this.resolveImage(s.logoUrl, s.logoBase64);
+  }
 
-    return null;
+  getMapImage(): string | null {
+    const s = this.settings();
+    if (!s) return null;
+
+    return this.resolveImage(s.mapImageUrl, s.mapImageBase64);
+  }
+
+  getInfoMarkerIcon(): string | null {
+    const s = this.settings();
+    if (!s) return null;
+
+    return this.resolveImage(s.infoMarkerIconUrl, s.infoMarkerIconBase64);
+  }
+
+  getTouristMarkerIcon(): string | null {
+    const s = this.settings();
+    if (!s) return null;
+
+    return this.resolveImage(s.touristMarkerIconUrl, s.touristMarkerIconBase64);
   }
 
   getPhone(): string | null {
@@ -109,6 +136,26 @@ export class GeneralSettingsService {
       ...(currentSettings ?? {}),
       ...partialSettings
     }));
+  }
+
+  private resolveImage(url?: string | null, base64?: string | null): string | null {
+    if (url) {
+      return this.resolveAssetUrl(url);
+    }
+
+    if (base64) {
+      return base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
+    }
+
+    return null;
+  }
+
+  private resolveAssetUrl(url: string): string {
+    if (/^(https?:|data:|blob:)/i.test(url)) {
+      return url;
+    }
+
+    return new URL(url, this.api).toString();
   }
 
   private normalizeHexColor(value: string | null | undefined, fallback: string): string {

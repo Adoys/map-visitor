@@ -4,6 +4,7 @@ import {
   Component,
   DestroyRef,
   ElementRef,
+  effect,
   inject,
   NgZone,
   OnDestroy,
@@ -11,9 +12,11 @@ import {
 } from '@angular/core';
 import { DialogService } from 'primeng/dynamicdialog';
 import { MessageService } from 'primeng/api';
-import { Application, Container, FederatedPointerEvent, Graphics, Text } from 'pixi.js';
+import { Application, Container, FederatedPointerEvent, Graphics, Sprite, Text, Texture } from 'pixi.js';
+import { GeneralSettingsService } from '../../company-settings/general-settings/general-settings.service';
 import { LoginService } from '../../login/login.service';
 import { PointOfInterestModalComponent } from '../point-of-interest-modal/point-of-interest-modal.component';
+import { firstValueFrom } from 'rxjs';
 
 type MapPointType = 'interest' | 'info' | 'current-info';
 
@@ -28,7 +31,17 @@ interface MapPoint {
 
 interface PointMenuOption {
   label: string;
-  type: Exclude<MapPointType, 'current-info'>;
+  action: 'create-interest' | 'create-info' | 'change-map-image';
+}
+
+interface LoadedMarkerIcons {
+  interest: Texture | null;
+  info: Texture | null;
+}
+
+interface LoadedMapAssets {
+  background: Texture | null;
+  markers: LoadedMarkerIcons;
 }
 
 @Component({
@@ -42,12 +55,15 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
   private readonly auth = inject(LoginService);
+  private readonly settings = inject(GeneralSettingsService);
   private readonly messageService = inject(MessageService);
   private readonly dialogService = inject(DialogService);
+  private readonly mapImageInput = viewChild<ElementRef<HTMLInputElement>>('mapImageInput');
 
   protected readonly contextOptions: PointMenuOption[] = [
-    { label: 'Crear punto de interes', type: 'interest' },
-    { label: 'Crear punto de informacion', type: 'info' },
+    { label: 'Crear punto de interes', action: 'create-interest' },
+    { label: 'Crear punto de informacion', action: 'create-info' },
+    { label: 'Cambiar imagen del mapa', action: 'change-map-image' },
   ];
 
   protected showContextMenu = false;
@@ -63,11 +79,17 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private mapWidth = 1600;
   private mapHeight = 900;
   private nextPointId = 5;
+  private mapBackgroundTexture: Texture | null = null;
+  private markerIcons: LoadedMarkerIcons = { interest: null, info: null };
   private isDragging = false;
+  private blockNextTap = false;
   private dragStartPointer = { x: 0, y: 0 };
   private dragStartViewport = { x: 0, y: 0 };
   private contextWorldPosition = { x: 0, y: 0 };
   private hasFittedViewport = false;
+  private activePointerType = 'mouse';
+  private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
+  private longPressScreenPosition = { x: 0, y: 0 };
 
   private readonly basePoints: MapPoint[] = [
     {
@@ -104,6 +126,18 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     },
   ];
 
+  constructor() {
+    effect(() => {
+      this.settings.settings();
+
+      if (!this.isReady) {
+        return;
+      }
+
+      this.refreshMapAssets().catch(console.error);
+    });
+  }
+
   ngAfterViewInit(): void {
     this.initPixiApp().catch((error) => {
       console.error(error);
@@ -128,19 +162,14 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     return this.auth.userRole() === 'screen';
   }
 
-  protected get roleLabel(): string {
-    if (this.isAdmin) {
-      return 'Administrador';
+  protected async onContextMenuAction(action: PointMenuOption['action']): Promise<void> {
+    if (action === 'change-map-image') {
+      this.hideContextMenu();
+      this.mapImageInput()?.nativeElement.click();
+      return;
     }
 
-    if (this.isInfoPointUser) {
-      return 'Punto de informacion';
-    }
-
-    return 'Visitante';
-  }
-
-  protected addPointFromContextMenu(type: Exclude<MapPointType, 'current-info'>): void {
+    const type = action === 'create-interest' ? 'interest' : 'info';
     const point: MapPoint = {
       id: `${type}-${this.nextPointId++}`,
       label: type === 'interest' ? 'Nuevo punto de interes' : 'Nuevo punto de informacion',
@@ -165,6 +194,54 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
           ? 'Se ha colocado un nuevo punto de interes en el mapa.'
           : 'Se ha colocado un nuevo punto de informacion en el mapa.',
     });
+  }
+
+  protected zoomIn(): void {
+    this.zoomAtScreenPoint(1.15);
+  }
+
+  protected zoomOut(): void {
+    this.zoomAtScreenPoint(0.85);
+  }
+
+  protected resetZoom(): void {
+    this.fitMapToViewport();
+  }
+
+  protected async onMapImageSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Archivo no valido',
+        detail: 'Selecciona una imagen para el mapa.',
+      });
+      input.value = '';
+      return;
+    }
+
+    try {
+      await firstValueFrom(this.settings.uploadMapImage(file));
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Mapa actualizado',
+        detail: 'La imagen del mapa se ha actualizado correctamente.',
+      });
+    } catch (error) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error al subir la imagen',
+        detail: 'No se pudo guardar la nueva imagen del mapa.',
+      });
+    } finally {
+      input.value = '';
+    }
   }
 
   protected hideContextMenu(): void {
@@ -193,8 +270,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     this.viewport.addChild(this.pointsLayer);
     this.app.stage.addChild(this.viewport);
 
-    this.createMapBackground();
-    this.renderPoints();
+    await this.refreshMapAssets();
     this.registerStageEvents();
     this.setupResizeHandling();
     this.fitMapToViewport();
@@ -204,6 +280,20 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
   private createMapBackground(): void {
     this.mapLayer.removeChildren();
+
+    if (this.mapBackgroundTexture) {
+      const sprite = new Sprite(this.mapBackgroundTexture);
+      sprite.anchor.set(0);
+      sprite.width = this.mapWidth;
+      sprite.height = this.mapHeight;
+
+      const border = new Graphics();
+      border.roundRect(0, 0, this.mapWidth, this.mapHeight, 28);
+      border.stroke({ color: 0xcbd5e1, width: 4 });
+
+      this.mapLayer.addChild(sprite, border);
+      return;
+    }
 
     const base = new Graphics();
     base.roundRect(0, 0, this.mapWidth, this.mapHeight, 28);
@@ -232,28 +322,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     roomD.roundRect(840, 540, 240, 180, 18);
     roomD.fill(0xfae5e9);
 
-    const title = new Text({
-      text: 'Mapa de visitantes',
-      style: {
-        fill: 0x0f172a,
-        fontSize: 32,
-        fontFamily: 'Georgia',
-        fontWeight: '600',
-      },
-    });
-    title.position.set(56, 32);
-
-    const subtitle = new Text({
-      text: 'Explora puntos de interes e informacion',
-      style: {
-        fill: 0x475569,
-        fontSize: 18,
-        fontFamily: 'Georgia',
-      },
-    });
-    subtitle.position.set(58, 74);
-
-    this.mapLayer.addChild(base, corridor, roomA, roomB, roomC, roomD, title, subtitle);
+    this.mapLayer.addChild(base, corridor, roomA, roomB, roomC, roomD);
   }
 
   private renderPoints(): void {
@@ -294,23 +363,41 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     const ring = new Graphics();
     const pin = new Graphics();
     const inner = new Graphics();
+    const markerTexture = this.getMarkerTexture(point.type);
 
-    if (point.type === 'interest') {
-      ring.circle(0, 0, 24).fill({ color: 0xffedd5, alpha: 0.6 });
-      pin.circle(0, 0, 15).fill(0xea580c);
-      pin.stroke({ color: 0x7c2d12, width: 2 });
-      inner.star(0, 0, 5, 8).fill(0xfffbeb);
-    } else if (point.type === 'current-info') {
-      ring.circle(0, 0, 28).fill({ color: 0xfef08a, alpha: 0.85 });
-      ring.stroke({ color: 0xf59e0b, width: 3 });
-      pin.circle(0, 0, 16).fill(0x2563eb);
-      pin.stroke({ color: 0xffffff, width: 3 });
-      inner.circle(0, 0, 6).fill(0xffffff);
+    if (point.type === 'current-info') {
+      ring.circle(0, 0, 32).fill({ color: 0xfef08a, alpha: 0.85 });
+      ring.stroke({ color: 0xf59e0b, width: 4 });
     } else {
-      ring.circle(0, 0, 22).fill({ color: 0xdbeafe, alpha: 0.7 });
-      pin.circle(0, 0, 14).fill(0x0284c7);
-      pin.stroke({ color: 0x0f172a, width: 2 });
-      inner.rect(-4, -7, 8, 14).fill(0xe0f2fe);
+      ring.circle(0, 0, point.type === 'interest' ? 24 : 22).fill({
+        color: point.type === 'interest' ? 0xffedd5 : 0xdbeafe,
+        alpha: 0.72,
+      });
+    }
+
+    if (markerTexture) {
+      const icon = new Sprite(markerTexture);
+      const size = point.type === 'current-info' ? 42 : 34;
+      icon.anchor.set(0.5);
+      icon.width = size;
+      icon.height = size;
+      marker.addChild(icon);
+    } else {
+      if (point.type === 'interest') {
+        pin.circle(0, 0, 15).fill(0xea580c);
+        pin.stroke({ color: 0x7c2d12, width: 2 });
+        inner.star(0, 0, 5, 8).fill(0xfffbeb);
+      } else if (point.type === 'current-info') {
+        pin.circle(0, 0, 16).fill(0x2563eb);
+        pin.stroke({ color: 0xffffff, width: 3 });
+        inner.circle(0, 0, 6).fill(0xffffff);
+      } else {
+        pin.circle(0, 0, 14).fill(0x0284c7);
+        pin.stroke({ color: 0x0f172a, width: 2 });
+        inner.rect(-4, -7, 8, 14).fill(0xe0f2fe);
+      }
+
+      marker.addChild(ring, pin, inner);
     }
 
     const label = new Text({
@@ -325,9 +412,10 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     label.anchor.set(0.5, 0);
     label.position.set(0, 28);
 
-    marker.addChild(ring, pin, inner, label);
+    marker.addChild(label);
     marker.on('pointertap', (event: FederatedPointerEvent) => {
-      if (event.button !== 0) {
+      if (event.button !== 0 || this.blockNextTap) {
+        this.blockNextTap = false;
         return;
       }
 
@@ -401,9 +489,24 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.activePointerType = event.pointerType ?? 'mouse';
     this.isDragging = true;
+    this.blockNextTap = false;
     this.dragStartPointer = { x: event.global.x, y: event.global.y };
     this.dragStartViewport = { x: this.viewport.x, y: this.viewport.y };
+
+    if (this.isAdmin && this.activePointerType !== 'mouse') {
+      this.longPressScreenPosition = { x: event.global.x, y: event.global.y };
+      this.clearLongPressTimer();
+      this.longPressTimeout = setTimeout(() => {
+        this.isDragging = false;
+        this.blockNextTap = true;
+        this.openContextMenuAt(
+          this.longPressScreenPosition.x,
+          this.longPressScreenPosition.y
+        );
+      }, 550);
+    }
   };
 
   private readonly onPointerMove = (event: FederatedPointerEvent) => {
@@ -411,14 +514,24 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    const deltaX = event.global.x - this.dragStartPointer.x;
+    const deltaY = event.global.y - this.dragStartPointer.y;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (distance > 8) {
+      this.blockNextTap = true;
+      this.clearLongPressTimer();
+    }
+
     this.viewport.position.set(
-      this.dragStartViewport.x + (event.global.x - this.dragStartPointer.x),
-      this.dragStartViewport.y + (event.global.y - this.dragStartPointer.y)
+      this.dragStartViewport.x + deltaX,
+      this.dragStartViewport.y + deltaY
     );
   };
 
   private readonly onPointerUp = () => {
     this.isDragging = false;
+    this.clearLongPressTimer();
   };
 
   private zoomFromWheel(event: WheelEvent): void {
@@ -446,15 +559,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     }
 
     const hostRect = this.mapHost().nativeElement.getBoundingClientRect();
-    this.contextMenuPosition = {
-      x: event.clientX - hostRect.left,
-      y: event.clientY - hostRect.top,
-    };
-    this.contextWorldPosition = this.toWorldCoordinates(
-      this.contextMenuPosition.x,
-      this.contextMenuPosition.y
-    );
-    this.showContextMenu = true;
+    this.openContextMenuAt(event.clientX - hostRect.left, event.clientY - hostRect.top);
   }
 
   private toWorldCoordinates(screenX: number, screenY: number) {
@@ -482,6 +587,114 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
     this.resizeObserver.observe(host);
     this.destroyRef.onDestroy(() => this.resizeObserver?.disconnect());
+  }
+
+  private async refreshMapAssets(): Promise<void> {
+    const assets = await this.loadMapAssets();
+    this.mapBackgroundTexture = assets.background;
+    this.markerIcons = assets.markers;
+    this.createMapBackground();
+    this.renderPoints();
+  }
+
+  private async loadMapAssets(): Promise<LoadedMapAssets> {
+    const [background, markers] = await Promise.all([
+      this.loadTextureSafely(this.settings.getMapImage(), 'map-background'),
+      this.loadMarkerIcons(),
+    ]);
+
+    return { background, markers };
+  }
+
+  private getMarkerTexture(type: MapPointType): Texture | null {
+    if (type === 'interest') {
+      return this.markerIcons.interest;
+    }
+
+    return this.markerIcons.info;
+  }
+
+  private async loadMarkerIcons(): Promise<LoadedMarkerIcons> {
+    const [interest, info] = await Promise.all([
+      this.loadTextureSafely(this.settings.getTouristMarkerIcon(), 'interest-marker-icon'),
+      this.loadTextureSafely(this.settings.getInfoMarkerIcon(), 'info-marker-icon'),
+    ]);
+
+    return { interest, info };
+  }
+
+  private async loadTextureSafely(src: string | null, alias: string): Promise<Texture | null> {
+    if (!src) {
+      return null;
+    }
+
+    try {
+      return await this.loadTextureFromImage(this.addCacheBuster(src), alias);
+    } catch (error) {
+      console.error('Error loading map asset', error);
+      return null;
+    }
+  }
+
+  private loadTextureFromImage(src: string, label: string): Promise<Texture> {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+
+      if (!src.startsWith('data:') && !src.startsWith('blob:')) {
+        image.crossOrigin = 'anonymous';
+      }
+
+      image.onload = () => {
+        const texture = Texture.from(image, true);
+        texture.label = label;
+        resolve(texture);
+      };
+      image.onerror = () => reject(new Error(`No se pudo cargar la imagen ${label}: ${src}`));
+      image.src = src;
+    });
+  }
+
+  private addCacheBuster(src: string): string {
+    if (src.startsWith('data:') || src.startsWith('blob:')) {
+      return src;
+    }
+
+    const separator = src.includes('?') ? '&' : '?';
+    return `${src}${separator}v=${Date.now()}`;
+  }
+
+  private openContextMenuAt(screenX: number, screenY: number): void {
+    const hostRect = this.mapHost().nativeElement.getBoundingClientRect();
+    this.contextMenuPosition = {
+      x: screenX,
+      y: screenY,
+    };
+    this.contextWorldPosition = this.toWorldCoordinates(screenX, screenY);
+    this.showContextMenu = true;
+  }
+
+  private clearLongPressTimer(): void {
+    if (this.longPressTimeout) {
+      clearTimeout(this.longPressTimeout);
+      this.longPressTimeout = null;
+    }
+  }
+
+  private zoomAtScreenPoint(scaleFactor: number): void {
+    const host = this.mapHost().nativeElement;
+    const point = {
+      x: host.clientWidth / 2,
+      y: host.clientHeight / 2,
+    };
+    const worldPoint = this.toWorldCoordinates(point.x, point.y);
+    const currentScale = this.viewport.scale.x;
+    const newScale = Math.min(2.5, Math.max(0.45, currentScale * scaleFactor));
+
+    this.viewport.scale.set(newScale);
+    this.viewport.position.set(
+      point.x - worldPoint.x * newScale,
+      point.y - worldPoint.y * newScale
+    );
   }
 
   private fitMapToViewport(): void {
