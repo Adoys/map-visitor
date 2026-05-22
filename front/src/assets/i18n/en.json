@@ -12,15 +12,8 @@
   "DASHBOARD": {
     "WELCOME": "Welcome"
   },
-  "USERS": {},
-  "MAP": {
-    "INFO_SCREEN": "Information screen",
-    "YOU_ARE_HERE": "You are here",
-    "DUPLICATE_INFO": "User already assigned",
-    "DUPLICATE_INFO_DETAIL": "You cannot add the same information point twice.",
-    "INFO_ADDED": "A new information point has been placed on the map.",
-    "INTEREST_ADDED": "A new point of interest has been placed on the map.",
-    "SELECT_INFO_USER": "Select information point user""ADD_USER": "Add User",
+  "USERS": {
+    "ADD_USER": "Add User",
     "CHANGE_PASSWORD": "Change Password",
     "CONFIRM_DELETE": "Do you want to delete the user \"{{name}}\"?",
     "CREATE_SUCCESS": "User created successfully",
@@ -43,6 +36,19 @@
     "SAVE_ERROR": "Error saving user",
     "TITLE": "User Management",
     "UPDATE_SUCCESS": "User updated successfully"
+  },
+  "MAP": {
+    "INFO_SCREEN": "Information screen",
+    "YOU_ARE_HERE": "You are here",
+    "DUPLICATE_INFO": "User already assigned",
+    "DUPLICATE_INFO_DETAIL": "You cannot add the same information point twice.",
+    "INFO_ADDED": "A new information point has been placed on the map.",
+    "INTEREST_ADDED": "A new point of interest has been placed on the map.",
+    "SELECT_INFO_USER": "Select information point user",
+    "CREATE_INTEREST": "Create point of interest",
+    "CREATE_INFO": "Create information point",
+    "CHANGE_IMAGE": "Change map image",
+    "DELETE_POINT": "Delete point"
   },
   "SETTINGS": {
     "NOTIFICATIONS": "Notifications",

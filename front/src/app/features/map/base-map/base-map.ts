@@ -16,6 +16,9 @@ import { Application, Container, FederatedPointerEvent, Graphics, Sprite, Textur
 import { GeneralSettingsService } from '../../company-settings/general-settings/general-settings.service';
 import { LoginService } from '../../login/login.service';
 import { PointOfInterestModalComponent } from '../point-of-interest-modal/point-of-interest-modal.component';
+import { MapPointsService, MapPointPayload } from '../map-points.service';
+import { SelectInfoPointUserModalComponent } from '../select-info-point-user-modal.component';
+import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
 import { UserService } from '../../user-modal/user.service';
 import { User } from '../../user-modal/models/users';
@@ -29,6 +32,8 @@ interface MapPoint {
   type: MapPointType;
   x: number;
   y: number;
+  userId?: number;
+  persisted?: boolean;
 }
 
 interface PointMenuOption {
@@ -48,7 +53,8 @@ interface LoadedMapAssets {
 
 @Component({
   selector: 'base-map',
-  imports: [CommonModule],
+  standalone: true,
+  imports: [CommonModule, TranslateModule],
   templateUrl: './base-map.html',
   styleUrl: './base-map.scss',
 })
@@ -58,6 +64,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   protected usedInfoPointUserIds: Set<number> = new Set();
   protected selectedInfoPointUserId: number | null = null;
   private readonly userService = inject(UserService);
+  private readonly mapPointsService = inject(MapPointsService);
+  private readonly translate = inject(TranslateService);
   private readonly mapHost = viewChild.required<ElementRef<HTMLDivElement>>('mapHost');
   private readonly destroyRef = inject(DestroyRef);
   private readonly zone = inject(NgZone);
@@ -105,7 +113,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private longPressScreenPosition = { x: 0, y: 0 };
 
-  private readonly basePoints: MapPoint[] = [
+  private readonly defaultBasePoints: MapPoint[] = [
     {
       id: 'interest-1',
       label: 'Recepcion historica',
@@ -139,6 +147,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       y: 640,
     },
   ];
+  private basePoints: MapPoint[] = [];
 
   constructor() {
     effect(() => {
@@ -153,14 +162,16 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    this.initPixiApp().catch((error) => {
-      console.error(error);
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Mapa no disponible',
-        detail: 'No se pudo inicializar la vista del mapa.',
+    this.loadMapPoints()
+      .then(() => this.initPixiApp())
+      .catch((error) => {
+        console.error(error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Mapa no disponible',
+          detail: 'No se pudo inicializar la vista del mapa.',
+        });
       });
-    });
   }
 
   ngOnDestroy(): void {
@@ -200,54 +211,73 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     const type = action === 'create-interest' ? 'interest' : 'info';
 
     if (type === 'info') {
-      // Cargar usuarios tipo SCREEN y mostrar dropdown
-      this.userService.findAll().subscribe((users) => {
-        this.infoPointUsers = users.filter(u => u.role === 'SCREEN');
-        // Marcar los ya usados
-        this.usedInfoPointUserIds = new Set(this.basePoints.filter(p => p.type === 'info' && (p as any).userId).map((p: any) => p.userId));
-        this.selectedInfoPointUserId = null;
-        // Mostrar prompt simple (puedes reemplazar por modal custom)
-        const disponibles = this.infoPointUsers.filter(u => !this.usedInfoPointUserIds.has(u.id));
-        if (disponibles.length === 0) {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'Sin usuarios disponibles',
-            detail: 'No hay usuarios de punto de información disponibles.',
-          });
-          this.hideContextMenu();
-          return;
-        }
-        const nombre = prompt('Seleccione el usuario de punto de información (userId):\n' + disponibles.map(u => u.userId).join(', '));
-        const user = disponibles.find(u => u.userId === nombre);
-        if (!user) {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'Usuario no válido',
-            detail: 'Debe seleccionar un usuario válido.',
-          });
-          this.hideContextMenu();
-          return;
-        }
-        // Validar duplicado
-        if (this.basePoints.some((p: any) => p.type === 'info' && (p as any).userId === user.id)) {
-          this.messageService.add({
-            severity: 'warn',
-            summary: 'Usuario ya asignado',
-            detail: 'No se puede agregar dos veces el mismo punto de información.',
-          });
-          this.hideContextMenu();
-          return;
-        }
-        // Crear punto de información
-        const point: MapPoint & { userId: number } = {
-          id: `info-${user.id}`,
-          label: user.userId,
-          description: `Usuario de punto de información: ${user.userId}`,
-          type: 'info',
-          x: this.contextWorldPosition.x,
-          y: this.contextWorldPosition.y,
-          userId: user.id,
+      const users = await firstValueFrom(this.userService.findAll());
+      this.infoPointUsers = users.filter((u) => u.role === 'SCREEN');
+      this.usedInfoPointUserIds = new Set(
+        this.basePoints.filter((p) => p.type === 'info' && p.userId != null).map((p) => p.userId as number)
+      );
+      const disponibles = this.infoPointUsers.filter((u) => !this.usedInfoPointUserIds.has(u.id));
+
+      if (disponibles.length === 0) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Sin usuarios disponibles',
+          detail: 'No hay usuarios de punto de información disponibles.',
+        });
+        this.hideContextMenu();
+        return;
+      }
+
+      const ref = this.dialogService.open(SelectInfoPointUserModalComponent, {
+        header: 'Seleccionar usuario de punto de información',
+        width: '30rem',
+        data: { users: disponibles },
+      });
+
+      if (!ref) {
+        this.hideContextMenu();
+        return;
+      }
+
+      const selectedUser = await firstValueFrom(ref.onClose);
+      if (!selectedUser) {
+        this.hideContextMenu();
+        return;
+      }
+
+      if (this.basePoints.some((p) => p.type === 'info' && p.userId === selectedUser.id)) {
+        this.messageService.add({
+          severity: 'warn',
+          summary: 'Usuario ya asignado',
+          detail: 'No se puede agregar dos veces el mismo punto de información.',
+        });
+        this.hideContextMenu();
+        return;
+      }
+
+      try {
+        const created = await firstValueFrom(
+          this.mapPointsService.create({
+            label: selectedUser.userId,
+            description: `Usuario de punto de información: ${selectedUser.userId}`,
+            type: 'info',
+            x: this.contextWorldPosition.x,
+            y: this.contextWorldPosition.y,
+            userId: selectedUser.id,
+          })
+        );
+
+        const point: MapPoint = {
+          id: String(created.id),
+          label: created.label,
+          description: created.description,
+          type: created.type,
+          x: created.x,
+          y: created.y,
+          userId: created.userId,
+          persisted: true,
         };
+
         this.basePoints.push(point);
         this.renderPoints();
         this.hideContextMenu();
@@ -256,33 +286,60 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
           summary: 'Elemento creado',
           detail: 'Se ha colocado un nuevo punto de información en el mapa.',
         });
-      });
+      } catch (error) {
+        console.error(error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error de guardado',
+          detail: 'No se pudo guardar el nuevo punto de información.',
+        });
+      }
       return;
     }
 
     // Para interest, flujo normal
-    const point: MapPoint = {
-      id: `${type}-${this.nextPointId++}`,
+    const payload: MapPointPayload = {
       label: type === 'interest' ? 'Nuevo punto de interes' : 'Nuevo punto de informacion',
       description:
         type === 'interest'
           ? 'Punto de interes pendiente de completar.'
           : 'Punto de informacion pendiente de completar.',
-      type,
+      type: type as 'interest' | 'info',
       x: this.contextWorldPosition.x,
       y: this.contextWorldPosition.y,
     };
 
-    this.basePoints.push(point);
-    this.renderPoints();
-    this.hideContextMenu();
-    this.messageService.add({
-      severity: 'success',
-      summary: 'Elemento creado',
-      detail: type === 'interest'
-        ? 'Se ha colocado un nuevo punto de interes en el mapa.'
-        : 'Se ha colocado un nuevo punto de informacion en el mapa.',
-    });
+    try {
+      const createdPoint = await firstValueFrom(this.mapPointsService.create(payload));
+      const point: MapPoint = {
+        id: String(createdPoint.id),
+        label: createdPoint.label,
+        description: createdPoint.description,
+        type: createdPoint.type,
+        x: createdPoint.x,
+        y: createdPoint.y,
+        persisted: true,
+      };
+
+      this.basePoints.push(point);
+      this.renderPoints();
+      this.hideContextMenu();
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Elemento creado',
+        detail:
+          type === 'interest'
+            ? 'Se ha colocado un nuevo punto de interes en el mapa.'
+            : 'Se ha colocado un nuevo punto de informacion en el mapa.',
+      });
+    } catch (error) {
+      console.error(error);
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Error de guardado',
+        detail: 'No se pudo guardar el nuevo punto en la base de datos.',
+      });
+    }
   }
 
   protected zoomIn(): void {
@@ -473,7 +530,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     const markerTexture = this.getMarkerTexture(point.type);
 
     // Si es el punto logueado, color rojo
-    const isLoggedInfoPoint = point.type === 'info' && (point as any).userId === this.auth.userId();
+    const isLoggedInfoPoint = point.type === 'info' && (point as any).userId === this.auth.getUserId();
     if (point.type === 'current-info') {
       ring.circle(0, 0, 32).fill({ color: 0xfef08a, alpha: 0.85 });
       ring.stroke({ color: 0xf59e0b, width: 4 });
@@ -539,7 +596,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     }
 
     // Si es punto de información logueado
-    if (point.type === 'info' && (point as any).userId === this.auth.userId()) {
+    if (point.type === 'info' && (point as any).userId === this.auth.getUserId()) {
       this.messageService.add({
         severity: 'info',
         summary: 'Usted está aquí',
@@ -694,6 +751,12 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     this.renderPoints();
     this.hideContextMenu();
 
+    if (deletedPoint.persisted) {
+      firstValueFrom(this.mapPointsService.delete(deletedPoint.id)).catch((error) => {
+        console.error('No se pudo eliminar el punto en el servidor:', error);
+      });
+    }
+
     this.messageService.add({
       severity: 'success',
       summary: 'Punto eliminado',
@@ -729,6 +792,25 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
     this.resizeObserver.observe(host);
     this.destroyRef.onDestroy(() => this.resizeObserver?.disconnect());
+  }
+
+  private async loadMapPoints(): Promise<void> {
+    try {
+      const points = await firstValueFrom(this.mapPointsService.findAll());
+      this.basePoints = points.map((mapPoint) => ({
+        id: String(mapPoint.id),
+        label: mapPoint.label,
+        description: mapPoint.description,
+        type: mapPoint.type,
+        x: mapPoint.x,
+        y: mapPoint.y,
+        userId: mapPoint.userId,
+        persisted: true,
+      }));
+    } catch (error) {
+      console.error('No se pudieron cargar los puntos del mapa:', error);
+      this.basePoints = [...this.defaultBasePoints];
+    }
   }
 
   private async refreshMapAssets(): Promise<void> {

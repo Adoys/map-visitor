@@ -1,0 +1,23 @@
+.select-info-modal {
+  display: grid;
+  gap: 1rem;
+}
+
+.select-info-modal__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.select-info-modal__select {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.5rem;
+}
+
+.select-info-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

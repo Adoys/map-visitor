@@ -52,6 +52,16 @@ export class LoginService {
     return this.userRole() === 'admin';
   }
 
+  getUserId(): number | null {
+    const token = this.getToken();
+    const decoded = token ? this.decodeToken(token) : null;
+    if (!decoded) {
+      return null;
+    }
+    const id = decoded.userId ?? decoded.sub ?? decoded.id ?? null;
+    return typeof id === 'string' ? Number(id) : id;
+  }
+
   getToken(): string | null {
     return localStorage.getItem('token');
   }
