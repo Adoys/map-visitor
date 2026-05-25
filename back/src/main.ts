@@ -21,6 +21,7 @@ async function bootstrap() {
   const fs = await import('fs');
   const mkdirp = (path: string) => fs.promises.mkdir(path, { recursive: true });
   await mkdirp(join(__dirname, '..', 'public', 'uploads', 'company-settings'));
+  await mkdirp(join(__dirname, '..', 'public', 'uploads', 'map-points'));
 
   // ✅ Habilitar validación global de DTOs
   app.useGlobalPipes(

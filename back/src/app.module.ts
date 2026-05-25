@@ -1,3 +1,4 @@
+import { MapModule } from './map/map.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -7,6 +8,7 @@ import { CompanySettingsModule } from './company-settings/company-settings.modul
 import { CompanyLanguagesModule } from './company-languages/company-languages.module';
 import { SmtpModule } from './smtp/smtp.module';
 import { NotificationsModule } from './notifications.module';
+import { AppTranslationsModule } from './app-translations/app-translations.module';
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { NotificationsModule } from './notifications.module';
     CompanyLanguagesModule,
     SmtpModule,
     NotificationsModule,
+    AppTranslationsModule,
+    MapModule,
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
