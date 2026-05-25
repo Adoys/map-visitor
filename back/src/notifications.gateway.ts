@@ -4,6 +4,8 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  MessageBody,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { Logger } from '@nestjs/common';
@@ -35,5 +37,14 @@ export class NotificationsGateway
   // Método para emitir notificaciones a todos los clientes conectados
   emitSettingsUpdated(updatedSettings: any) {
     this.server.emit('settingsUpdated', updatedSettings);
+  }
+
+  emitMapPointsUpdated(data?: any) {
+    this.server.emit('mapPointsUpdated', data);
+  }
+
+  @SubscribeMessage('mapPointsUpdated')
+  handleMapPointsUpdated(@MessageBody() data?: any) {
+    this.emitMapPointsUpdated(data);
   }
 }

@@ -5,9 +5,13 @@ import { MapPointImage } from './map-point-image.entity';
 import { MapPointTranslation } from './map-point-translation.entity';
 import { MapPointsService } from './map.service';
 import { MapController } from './map.controller';
+import { NotificationsModule } from '../notifications.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([MapPoint, MapPointImage, MapPointTranslation])],
+  imports: [
+    TypeOrmModule.forFeature([MapPoint, MapPointImage, MapPointTranslation]),
+    NotificationsModule,
+  ],
   providers: [MapPointsService],
   controllers: [MapController],
 })

@@ -12,6 +12,7 @@ import { CreateMapPointDto } from './dto/create-map-point.dto';
 import { UpdateMapPointPositionDto } from './dto/update-map-point-position.dto';
 import { UpsertMapPointTranslationDto } from './dto/upsert-map-point-translation.dto';
 import { UpdateMapPointImageDto } from './dto/update-map-point-image.dto';
+import { NotificationsGateway } from '../notifications.gateway';
 
 @Injectable()
 export class MapPointsService {
@@ -23,6 +24,7 @@ export class MapPointsService {
     @InjectRepository(MapPointTranslation)
     private readonly mapPointTranslationRepo: Repository<MapPointTranslation>,
     private readonly configService: ConfigService,
+    private readonly notificationsGateway: NotificationsGateway,
   ) { }
 
   async findAll(): Promise<MapPoint[]> {
@@ -31,11 +33,20 @@ export class MapPointsService {
 
   async create(createMapPointDto: CreateMapPointDto): Promise<MapPoint> {
     const mapPoint = this.mapPointRepo.create(createMapPointDto);
-    return this.mapPointRepo.save(mapPoint);
+    const savedPoint = await this.mapPointRepo.save(mapPoint);
+    this.notificationsGateway.emitMapPointsUpdated({
+      action: 'created',
+      pointId: savedPoint.id,
+    });
+    return savedPoint;
   }
 
   async delete(id: number): Promise<void> {
     await this.mapPointRepo.delete(id);
+    this.notificationsGateway.emitMapPointsUpdated({
+      action: 'deleted',
+      pointId: id,
+    });
   }
 
   async updatePosition(id: number, dto: UpdateMapPointPositionDto): Promise<MapPoint> {
@@ -46,7 +57,12 @@ export class MapPointsService {
 
     point.x = dto.x;
     point.y = dto.y;
-    return this.mapPointRepo.save(point);
+    const savedPoint = await this.mapPointRepo.save(point);
+    this.notificationsGateway.emitMapPointsUpdated({
+      action: 'position-updated',
+      pointId: savedPoint.id,
+    });
+    return savedPoint;
   }
 
   async getContent(id: number, languageCode?: string) {
