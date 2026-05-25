@@ -4,6 +4,7 @@ import { TabsModule } from 'primeng/tabs';
 import { CommonModule } from '@angular/common';
 import { GeneralSettings } from './general-settings/general-settings';
 import { MailSettingsComponent } from './mail-settings/mail-settings';
+import { PublicPhrasesSettings } from './public-phrases-settings/public-phrases-settings';
 import { DynamicDialogRef } from 'primeng/dynamicdialog';
 import { ButtonModule } from 'primeng/button';
 import { FormGroup, FormsModule } from '@angular/forms';
@@ -17,6 +18,7 @@ import { FormGroup, FormsModule } from '@angular/forms';
     TranslatePipe,
     GeneralSettings,
     MailSettingsComponent,
+    PublicPhrasesSettings,
     ButtonModule,
   ],
   templateUrl: './company-settings.html',

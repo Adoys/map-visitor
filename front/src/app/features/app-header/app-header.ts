@@ -14,6 +14,7 @@ import { SelectModule } from 'primeng/select';
 import { LangChangeEvent, TranslateModule, TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import { CompanySettingsComponent } from '../company-settings/company-settings';
+import { AppTranslationsService } from '../app-translations/app-translations.service';
 
 @Component({
   selector: 'app-header',
@@ -51,6 +52,7 @@ export class AppHeader implements OnInit, OnDestroy {
     public auth: LoginService,
     public dialogService: DialogService,
     private langService: LanguagesService,
+    private appTranslations: AppTranslationsService,
   ) {
     this.isAdmin = this.auth.isAdmin();
   }
@@ -62,7 +64,7 @@ export class AppHeader implements OnInit, OnDestroy {
       const savedLang = localStorage.getItem('lang');
       this.selectedLanguage = savedLang || this.translate.getBrowserLang() || langs[0]?.code || 'es';
 
-      this.translate.use(this.selectedLanguage);
+      this.useLanguage(this.selectedLanguage);
 
       // construir menú la primera vez
       this.buildAdminMenuReactive();
@@ -103,8 +105,20 @@ export class AppHeader implements OnInit, OnDestroy {
   }
 
   languageChange() {
-    this.translate.use(this.selectedLanguage);
+    this.useLanguage(this.selectedLanguage);
     localStorage.setItem('lang', this.selectedLanguage);
+  }
+
+  private async useLanguage(languageCode: string): Promise<void> {
+    if (!['es', 'en'].includes(languageCode)) {
+      await this.appTranslations.applyLanguage(languageCode).catch(console.error);
+      this.translate.use(languageCode);
+      return;
+    }
+
+    this.translate.use(languageCode).subscribe(() => {
+      this.appTranslations.applyLanguage(languageCode).catch(console.error);
+    });
   }
 
   toggleAdminMenu() {

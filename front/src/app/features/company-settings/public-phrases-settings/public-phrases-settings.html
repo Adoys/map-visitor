@@ -1,0 +1,56 @@
+<section class="public-phrases">
+  <div class="public-phrases__toolbar">
+    <p-select
+      [options]="languages"
+      [ngModel]="selectedLanguageCode"
+      (ngModelChange)="onLanguageChange($event)"
+      optionValue="code"
+      optionLabel="name"
+      [placeholder]="'HEADER.LANGUAGE_LABEL' | translate"
+      class="public-phrases__language"
+    >
+      <ng-template let-language #item>
+        <ng-container *ngTemplateOutlet="languageOption; context: { $implicit: language }"></ng-container>
+      </ng-template>
+
+      <ng-template #selectedItem let-language>
+        <ng-container *ngTemplateOutlet="languageOption; context: { $implicit: language }"></ng-container>
+      </ng-template>
+    </p-select>
+
+    <ng-template #languageOption let-language>
+      @if (language?.flag) {
+      <img class="public-phrases__flag" [src]="language.flag" [alt]="language.name" />
+      } @else {
+      <span class="public-phrases__flag public-phrases__flag--empty" aria-hidden="true"></span>
+      }
+      <span>{{ language?.name }}</span>
+    </ng-template>
+  </div>
+
+  <div class="public-phrases__list">
+    @for (phrase of phrases; track phrase.key) {
+    <label class="public-phrases__field">
+      <span>{{ phrase.labelKey | translate }}</span>
+      <textarea
+        pTextarea
+        rows="2"
+        [(ngModel)]="values[phrase.key]"
+        [disabled]="loading || saving"
+      ></textarea>
+    </label>
+    }
+  </div>
+
+  <div class="public-phrases__actions">
+    <button
+      pButton
+      type="button"
+      icon="pi pi-save"
+      [label]="'COMMON_LABELS.SAVE' | translate"
+      [loading]="saving"
+      [disabled]="loading || !selectedLanguageCode"
+      (click)="save()"
+    ></button>
+  </div>
+</section>

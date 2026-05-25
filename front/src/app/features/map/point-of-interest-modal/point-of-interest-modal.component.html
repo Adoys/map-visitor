@@ -1,14 +1,134 @@
 <section class="poi-modal">
-  <p class="poi-modal__eyebrow">Punto de interes</p>
-  <h2 class="poi-modal__title">{{ point.label }}</h2>
-  <p class="poi-modal__description">{{ point.description }}</p>
+  @if (languages.length > 1) {
+  <div class="poi-modal__toolbar">
+    <p-select
+      [options]="languages"
+      [ngModel]="selectedLanguageCode"
+      (ngModelChange)="onLanguageChange($event)"
+      optionValue="code"
+      optionLabel="name"
+      class="poi-modal__language"
+    >
+      <ng-template let-language #item>
+        <ng-container *ngTemplateOutlet="languageOption; context: { $implicit: language }"></ng-container>
+      </ng-template>
 
-  <div class="poi-modal__meta">
-    <span>Coordenada X: {{ point.x | number:'1.0-0' }}</span>
-    <span>Coordenada Y: {{ point.y | number:'1.0-0' }}</span>
+      <ng-template #selectedItem let-language>
+        <ng-container *ngTemplateOutlet="languageOption; context: { $implicit: language }"></ng-container>
+      </ng-template>
+    </p-select>
+
+    <ng-template #languageOption let-language>
+      @if (language?.flag) {
+      <img class="poi-modal__language-flag" [src]="language.flag" [alt]="language.name" />
+      } @else {
+      <span class="poi-modal__language-flag poi-modal__language-flag--empty" aria-hidden="true"></span>
+      }
+      <span>{{ language?.name }}</span>
+    </ng-template>
+  </div>
+  }
+
+  <div class="poi-modal__gallery">
+    @if (activeImage) {
+    <button type="button" class="poi-modal__image-button" (click)="openLightbox(activeImage)">
+      <img class="poi-modal__gallery-image" [src]="activeImage.imageUrl" [alt]="activeImage.altText || title" />
+    </button>
+    @if (images.length > 1) {
+    <button type="button" class="poi-modal__gallery-nav poi-modal__gallery-nav--prev" (click)="previousImage()">
+      <span class="pi pi-chevron-left" aria-hidden="true"></span>
+    </button>
+    <button type="button" class="poi-modal__gallery-nav poi-modal__gallery-nav--next" (click)="nextImage()">
+      <span class="pi pi-chevron-right" aria-hidden="true"></span>
+    </button>
+    <div class="poi-modal__gallery-count">{{ activeImageIndex + 1 }} / {{ images.length }}</div>
+    }
+    } @else {
+    <div class="poi-modal__gallery-empty">
+      <span class="pi pi-image" aria-hidden="true"></span>
+    </div>
+    }
   </div>
 
-  <p class="poi-modal__note">
-    Este componente es un placeholder listo para sustituirse por la ficha completa del punto de interes.
-  </p>
+  @if (!editMode) {
+  <section class="poi-modal__text-panel">
+    <div class="poi-modal__text-toolbar">
+      <button type="button" class="poi-modal__text-button" (click)="decreaseText()" [title]="'MAP.POI_TEXT_DECREASE' | translate">
+        A-
+      </button>
+      <button type="button" class="poi-modal__text-button" (click)="increaseText()" [title]="'MAP.POI_TEXT_INCREASE' | translate">
+        A+
+      </button>
+      <button type="button" class="poi-modal__text-button" (click)="resetText()" [title]="'MAP.POI_TEXT_RESET' | translate">
+        <span class="pi pi-refresh" aria-hidden="true"></span>
+      </button>
+    </div>
+    <article class="poi-modal__description" [style.font-size]="descriptionFontSize" [innerHTML]="descriptionHtml"></article>
+  </section>
+  } @else {
+  <form class="poi-modal__editor" (ngSubmit)="saveTranslation()">
+    <label class="poi-modal__field">
+      <span>{{ 'MAP.POI_TITLE' | translate }}</span>
+      <input type="text" [(ngModel)]="editTitle" name="title" required />
+    </label>
+
+    <label class="poi-modal__field">
+      <span>{{ 'MAP.POI_DESCRIPTION' | translate }}</span>
+      <p-editor [(ngModel)]="editDescription" name="description" [style]="{ height: '220px' }"></p-editor>
+    </label>
+
+    <div class="poi-modal__image-admin">
+      <label class="poi-modal__upload">
+        <span class="pi pi-upload" aria-hidden="true"></span>
+        <span>{{ uploading ? ('MAP.POI_UPLOADING_IMAGE' | translate) : ('MAP.POI_ADD_IMAGE' | translate) }}</span>
+        <input type="file" accept="image/*" [disabled]="uploading" (change)="onImageSelected($event)" />
+      </label>
+
+      @if (images.length > 0) {
+      <div class="poi-modal__image-list">
+        @for (image of images; track image.id) {
+        <div class="poi-modal__image-row">
+          <img [src]="image.imageUrl" [alt]="image.altText || title" />
+          <button type="button" class="poi-modal__delete-image" (click)="deleteImage(image)">
+            <span class="pi pi-trash" aria-hidden="true"></span>
+          </button>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <div class="poi-modal__actions">
+      <button type="button" class="p-button p-button-text" (click)="cancelEdit()">
+        {{ 'COMMON_LABELS.CANCEL' | translate }}
+      </button>
+      <button type="submit" class="p-button p-button-primary" [disabled]="saving || !editTitle.trim()">
+        {{ 'COMMON_LABELS.SAVE' | translate }}
+      </button>
+    </div>
+  </form>
+  }
+
+  @if (isAdmin && !editMode) {
+  <div class="poi-modal__actions">
+    <button type="button" class="p-button p-button-primary" (click)="startEdit()">
+      <span class="pi pi-pencil" aria-hidden="true"></span>
+      {{ 'MAP.POI_EDIT_CONTENT' | translate }}
+    </button>
+  </div>
+  }
+
+  @if (lightboxImage) {
+  <div class="poi-modal__lightbox" (click)="closeLightbox()">
+    <button type="button" class="poi-modal__lightbox-close" (click)="closeLightbox(); $event.stopPropagation()">
+      <span class="pi pi-times" aria-hidden="true"></span>
+    </button>
+    <img
+      class="poi-modal__lightbox-image"
+      [src]="lightboxImage.imageUrl"
+      [alt]="lightboxImage.altText || title"
+      (click)="$event.stopPropagation()"
+    />
+  </div>
+  }
 </section>

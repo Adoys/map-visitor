@@ -1,0 +1,59 @@
+.public-phrases {
+  display: grid;
+  gap: 1rem;
+  min-width: 500px;
+  padding: 1rem;
+}
+
+.public-phrases__toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.public-phrases__language {
+  min-width: 220px;
+}
+
+.public-phrases__flag {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  margin-right: 5px;
+  object-fit: cover;
+  vertical-align: -2px;
+}
+
+.public-phrases__flag--empty {
+  background: #e2e8f0;
+}
+
+.public-phrases__list {
+  display: grid;
+  gap: 0.85rem;
+  max-height: 52vh;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.public-phrases__field {
+  display: grid;
+  gap: 0.35rem;
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.public-phrases__field textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.public-phrases__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 640px) {
+  .public-phrases {
+    min-width: 0;
+  }
+}

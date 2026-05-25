@@ -1,33 +1,292 @@
 .poi-modal {
   display: grid;
-  gap: 0.9rem;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  min-width: min(760px, calc(100vw - 3rem));
+  max-height: calc(92vh - 4.5rem);
+  padding: 1rem 1.25rem 1.25rem;
+  background: var(--app-background-color);
   color: #0f172a;
 }
 
-.poi-modal__eyebrow {
-  margin: 0;
-  color: #0369a1;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.poi-modal__title {
-  margin: 0;
-  font-size: 1.5rem;
-}
-
-.poi-modal__description,
-.poi-modal__note {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.poi-modal__meta {
+.poi-modal__toolbar {
   display: flex;
+  gap: 0.45rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.poi-modal__language {
+  min-width: 9rem;
+}
+
+.poi-modal__language-flag {
+  display: inline-block;
+  width: 20px;
+  height: 14px;
+  margin-right: 5px;
+  object-fit: cover;
+  vertical-align: -2px;
+}
+
+.poi-modal__language-flag--empty {
+  background: #e2e8f0;
+}
+
+.poi-modal__gallery {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-background-color) 72%, #cbd5e1);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-background-color) 86%, #ffffff);
+}
+
+.poi-modal__image-button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  padding: 0;
+}
+
+.poi-modal__gallery-image {
+  display: block;
+  width: 100%;
+  height: min(320px, 36vh);
+  object-fit: contain;
+}
+
+.poi-modal__gallery-empty {
+  display: grid;
+  height: 220px;
+  place-items: center;
+  color: #94a3b8;
+  font-size: 2.5rem;
+}
+
+.poi-modal__gallery-nav {
+  position: absolute;
+  top: 50%;
+  display: inline-flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.poi-modal__gallery-nav--prev {
+  left: 0.75rem;
+}
+
+.poi-modal__gallery-nav--next {
+  right: 0.75rem;
+}
+
+.poi-modal__gallery-count {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.75rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+}
+
+.poi-modal__text-panel {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--app-background-color) 70%, #cbd5e1);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--app-background-color) 18%, #ffffff);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.poi-modal__text-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid color-mix(in srgb, var(--app-background-color) 65%, #e2e8f0);
+  background: color-mix(in srgb, var(--app-background-color) 35%, #ffffff);
+  padding: 0.45rem;
+}
+
+.poi-modal__text-button {
+  display: inline-flex;
+  min-width: 34px;
+  height: 32px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #0f172a;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.poi-modal__text-button:hover {
+  background: color-mix(in srgb, var(--app-button-color) 14%, transparent);
+}
+
+.poi-modal__description {
+  max-height: min(30vh, 18rem);
+  min-height: 8rem;
+  overflow: auto;
+  color: #1e293b;
+  line-height: 1.7;
+  padding: 1.15rem 1.25rem;
+  transition: font-size 0.15s ease;
+}
+
+.poi-modal__description:empty::before {
+  color: #64748b;
+  content: 'Sin descripción.';
+}
+
+.poi-modal__editor {
+  display: grid;
+  min-height: 0;
+  overflow: hidden;
+  gap: 1rem;
+}
+
+.poi-modal__editor .poi-modal__field:nth-child(2) {
+  min-height: 0;
+}
+
+:host ::ng-deep .poi-modal__editor .p-editor-content {
+  max-height: min(30vh, 18rem);
+  overflow: auto;
+}
+
+.poi-modal__field {
+  display: grid;
+  gap: 0.45rem;
+  font-weight: 600;
+}
+
+.poi-modal__field input {
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #0f172a;
+  font: inherit;
+  padding: 0.65rem 0.75rem;
+}
+
+.poi-modal__image-admin {
+  display: grid;
   gap: 0.75rem;
-  flex-wrap: wrap;
-  color: #334155;
-  font-size: 0.95rem;
+}
+
+.poi-modal__upload {
+  display: inline-flex;
+  width: fit-content;
+  gap: 0.45rem;
+  align-items: center;
+  border: 1px solid var(--app-button-color);
+  border-radius: 6px;
+  background: var(--app-button-color);
+  color: var(--app-button-text-color);
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.55rem 0.75rem;
+}
+
+.poi-modal__upload input {
+  display: none;
+}
+
+.poi-modal__image-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 0.75rem;
+}
+
+.poi-modal__image-row {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.poi-modal__image-row img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.poi-modal__delete-image {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.78);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.poi-modal__actions {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: flex-end;
+}
+
+.poi-modal__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.82);
+  padding: 5vh 5vw;
+}
+
+.poi-modal__lightbox-image {
+  display: block;
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+}
+
+.poi-modal__lightbox-close {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #0f172a;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 720px) {
+  .poi-modal {
+    min-width: 0;
+  }
+
+  .poi-modal__header {
+    display: grid;
+  }
 }

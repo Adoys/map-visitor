@@ -12,6 +12,37 @@
     </button>
   </div>
 
+  <div class="map-legend" aria-label="Leyenda del mapa">
+    <div class="map-legend__item">
+      @if (interestMarkerIconSrc; as interestIcon) {
+      <img class="map-legend__icon" [src]="interestIcon" alt="" aria-hidden="true" />
+      } @else {
+      <span class="map-legend__marker map-legend__marker--interest" aria-hidden="true"></span>
+      }
+      <span>{{ 'MAP.LEGEND_INTEREST_POINT' | translate }}</span>
+    </div>
+    <div class="map-legend__item">
+      @if (infoMarkerIconSrc; as infoIcon) {
+      <img class="map-legend__icon" [src]="infoIcon" alt="" aria-hidden="true" />
+      } @else {
+      <span class="map-legend__marker map-legend__marker--info" aria-hidden="true"></span>
+      }
+      <span>{{ 'MAP.LEGEND_INFO_POINT' | translate }}</span>
+    </div>
+    @if (isInfoPointUser) {
+    <div class="map-legend__item">
+      @if (infoMarkerIconSrc; as currentIcon) {
+      <span class="map-legend__current-icon" aria-hidden="true">
+        <img class="map-legend__icon" [src]="currentIcon" alt="" />
+      </span>
+      } @else {
+      <span class="map-legend__marker map-legend__marker--current" aria-hidden="true"></span>
+      }
+      <span>{{ 'MAP.LEGEND_YOU_ARE_HERE' | translate }}</span>
+    </div>
+    }
+  </div>
+
   <div #mapHost class="map-host">
     <input #mapImageInput type="file" accept="image/*" class="map-image-input" (change)="onMapImageSelected($event)" />
 

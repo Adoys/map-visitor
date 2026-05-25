@@ -1,4 +1,4 @@
-.dashboard {
+:host {
   display: flex;
   flex-direction: column;
   height: 100vh; // Toda la pantalla
@@ -13,8 +13,18 @@ app-header {
 
 .dashboard-body {
   flex: 1 1 auto;
+  min-height: 0;
   overflow: hidden; // Imprescindible
   display: flex; // Para que el contenido interno pueda expandirse
+  background: var(--app-background-color);
+}
+
+.canvas-container {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: block;
 }
 
 .map-indoor-container {

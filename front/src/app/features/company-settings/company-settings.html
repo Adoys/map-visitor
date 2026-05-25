@@ -3,6 +3,7 @@
     <p-tablist>
       <p-tab value="0">{{'SETTINGS.TAB_GENERAL' | translate}}</p-tab>
       <p-tab value="1">{{'SETTINGS.TAB_EMAIL' | translate}}</p-tab>
+      <p-tab value="2">{{'SETTINGS.TAB_PUBLIC_PHRASES' | translate}}</p-tab>
     </p-tablist>
     <p-tabpanels>
       <p-tabpanel value="0">
@@ -10,6 +11,9 @@
       </p-tabpanel>
       <p-tabpanel value="1">
         <app-mail-settings></app-mail-settings>
+      </p-tabpanel>
+      <p-tabpanel value="2">
+        <app-public-phrases-settings></app-public-phrases-settings>
       </p-tabpanel>
     </p-tabpanels>
   </p-tabs>

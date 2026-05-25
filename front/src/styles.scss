@@ -1,5 +1,6 @@
 /* You can add global styles to this file, and also import other style files */
 @import 'primeicons/primeicons.css';
+@import 'quill/dist/quill.snow.css';
 
 :root {
   --app-background-color: #f4f4f4;
@@ -11,12 +12,17 @@
 }
 
 html,
-body {
+body,
+app-root {
   margin: 0;
   padding: 0;
   overflow: hidden;
   height: 100%;
   background-color: var(--app-background-color);
+}
+
+app-root {
+  display: block;
 }
 
 .gradient-background {
@@ -30,6 +36,9 @@ body {
 }
 
 .p-button:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info),
+.p-button.p-button-primary,
+.p-button.p-button-success,
+.p-button.p-button-outlined:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info),
 .p-splitbutton .p-button {
   background: var(--app-button-color) !important;
   border-color: var(--app-button-color) !important;
@@ -38,8 +47,49 @@ body {
 
 .p-button:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info):enabled:hover,
 .p-button:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info):enabled:active,
+.p-button.p-button-primary:enabled:hover,
+.p-button.p-button-primary:enabled:active,
+.p-button.p-button-success:enabled:hover,
+.p-button.p-button-success:enabled:active,
 .p-splitbutton .p-button:enabled:hover,
 .p-splitbutton .p-button:enabled:active {
   background: var(--app-button-hover-color) !important;
   border-color: var(--app-button-hover-color) !important;
+}
+
+.p-button.p-button-outlined:not(.p-button-secondary):not(.p-button-danger):not(.p-button-text):not(.p-button-warning):not(.p-button-help):not(.p-button-contrast):not(.p-button-info) {
+  background: transparent !important;
+  color: var(--app-button-color) !important;
+}
+
+.poi-dialog.p-dialog,
+.poi-dialog .p-dialog {
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--app-background-color);
+}
+
+.poi-dialog.p-dialog .p-dialog-header,
+.poi-dialog .p-dialog-header {
+  background: var(--app-header-color);
+  color: var(--app-header-text-color);
+  border-radius: 12px 12px 0 0;
+}
+
+.poi-dialog.p-dialog .p-dialog-title,
+.poi-dialog .p-dialog-title {
+  color: var(--app-header-text-color);
+}
+
+.poi-dialog.p-dialog .p-dialog-header-icon,
+.poi-dialog .p-dialog-header-icon {
+  color: var(--app-header-text-color);
+}
+
+.poi-dialog.p-dialog .p-dialog-content,
+.poi-dialog .p-dialog-content {
+  overflow: hidden;
+  background: var(--app-background-color);
+  border-radius: 0 0 12px 12px;
+  padding: 0;
 }

@@ -1,9 +1,9 @@
 <section class="select-info-modal">
   <div class="select-info-modal__body">
-    <label for="info-user-select" class="select-info-modal__label">Seleccione usuario de punto de información</label>
+    <label for="info-user-select" class="select-info-modal__label">{{ 'MAP.SELECT_INFO_USER' | translate }}</label>
     <select id="info-user-select" class="select-info-modal__select" [value]="selectedUserId ?? ''"
       (change)="selectedUserId = +($any($event.target).value)">
-      <option value="" disabled selected>Seleccione...</option>
+      <option value="" disabled selected>{{ 'COMMON_LABELS.SELECT' | translate }}</option>
       <option *ngFor="let user of users" [value]="user.id">
         {{ user.userId }}
       </option>
@@ -11,9 +11,11 @@
   </div>
 
   <div class="select-info-modal__actions">
-    <button type="button" class="p-button p-button-secondary" (click)="cancel()">Cancelar</button>
+    <button type="button" class="p-button p-button-secondary" (click)="cancel()">
+      {{ 'COMMON_LABELS.CANCEL' | translate }}
+    </button>
     <button type="button" class="p-button p-button-primary" [disabled]="selectedUserId === null" (click)="confirm()">
-      Aceptar
+      {{ 'COMMON_LABELS.ACCEPT' | translate }}
     </button>
   </div>
 </section>

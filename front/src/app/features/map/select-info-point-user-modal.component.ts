@@ -1,12 +1,13 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { DynamicDialogConfig, DynamicDialogRef } from 'primeng/dynamicdialog';
+import { TranslateModule } from '@ngx-translate/core';
 import { User } from '../user-modal/models/users';
 
 @Component({
   selector: 'app-select-info-point-user-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslateModule],
   templateUrl: './select-info-point-user-modal.component.html',
   styleUrls: ['./select-info-point-user-modal.component.scss'],
 })

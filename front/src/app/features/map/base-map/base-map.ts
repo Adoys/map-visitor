@@ -112,6 +112,9 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private activePointerType = 'mouse';
   private longPressTimeout: ReturnType<typeof setTimeout> | null = null;
   private longPressScreenPosition = { x: 0, y: 0 };
+  private draggedPointId: string | null = null;
+  private pointDragMoved = false;
+  private pointDragSaving = false;
 
   private readonly defaultBasePoints: MapPoint[] = [
     {
@@ -187,6 +190,14 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     return this.auth.userRole() === 'screen';
   }
 
+  protected get interestMarkerIconSrc(): string | null {
+    return this.settings.getTouristMarkerIcon();
+  }
+
+  protected get infoMarkerIconSrc(): string | null {
+    return this.settings.getInfoMarkerIcon();
+  }
+
   protected get contextOptions(): PointMenuOption[] {
     return this.contextPointId ? this.pointContextOptions : this.mapContextOptions;
   }
@@ -212,7 +223,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
     if (type === 'info') {
       const users = await firstValueFrom(this.userService.findAll());
-      this.infoPointUsers = users.filter((u) => u.role === 'SCREEN');
+      this.infoPointUsers = users.filter((u) => u.role === 'screen');
       this.usedInfoPointUserIds = new Set(
         this.basePoints.filter((p) => p.type === 'info' && p.userId != null).map((p) => p.userId as number)
       );
@@ -221,15 +232,15 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       if (disponibles.length === 0) {
         this.messageService.add({
           severity: 'warn',
-          summary: 'Sin usuarios disponibles',
-          detail: 'No hay usuarios de punto de información disponibles.',
+          summary: this.translate.instant('MAP.NO_INFO_USERS'),
+          detail: this.translate.instant('MAP.NO_INFO_USERS_DETAIL'),
         });
         this.hideContextMenu();
         return;
       }
 
       const ref = this.dialogService.open(SelectInfoPointUserModalComponent, {
-        header: 'Seleccionar usuario de punto de información',
+        header: this.translate.instant('MAP.INFO_POINTS_TITLE'),
         width: '30rem',
         data: { users: disponibles },
       });
@@ -248,8 +259,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       if (this.basePoints.some((p) => p.type === 'info' && p.userId === selectedUser.id)) {
         this.messageService.add({
           severity: 'warn',
-          summary: 'Usuario ya asignado',
-          detail: 'No se puede agregar dos veces el mismo punto de información.',
+          summary: this.translate.instant('MAP.DUPLICATE_INFO'),
+          detail: this.translate.instant('MAP.DUPLICATE_INFO_DETAIL'),
         });
         this.hideContextMenu();
         return;
@@ -272,8 +283,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
           label: created.label,
           description: created.description,
           type: created.type,
-          x: created.x,
-          y: created.y,
+          x: Number(created.x),
+          y: Number(created.y),
           userId: created.userId,
           persisted: true,
         };
@@ -283,15 +294,15 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
         this.hideContextMenu();
         this.messageService.add({
           severity: 'success',
-          summary: 'Elemento creado',
-          detail: 'Se ha colocado un nuevo punto de información en el mapa.',
+          summary: this.translate.instant('MAP.ELEMENT_CREATED'),
+          detail: this.translate.instant('MAP.INFO_ADDED'),
         });
       } catch (error) {
         console.error(error);
         this.messageService.add({
           severity: 'error',
-          summary: 'Error de guardado',
-          detail: 'No se pudo guardar el nuevo punto de información.',
+          summary: this.translate.instant('MAP.SAVE_ERROR'),
+          detail: this.translate.instant('MAP.INFO_SAVE_ERROR_DETAIL'),
         });
       }
       return;
@@ -316,8 +327,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
         label: createdPoint.label,
         description: createdPoint.description,
         type: createdPoint.type,
-        x: createdPoint.x,
-        y: createdPoint.y,
+        x: Number(createdPoint.x),
+        y: Number(createdPoint.y),
         persisted: true,
       };
 
@@ -326,18 +337,15 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       this.hideContextMenu();
       this.messageService.add({
         severity: 'success',
-        summary: 'Elemento creado',
-        detail:
-          type === 'interest'
-            ? 'Se ha colocado un nuevo punto de interes en el mapa.'
-            : 'Se ha colocado un nuevo punto de informacion en el mapa.',
+        summary: this.translate.instant('MAP.ELEMENT_CREATED'),
+        detail: this.translate.instant(type === 'interest' ? 'MAP.INTEREST_ADDED' : 'MAP.INFO_ADDED'),
       });
     } catch (error) {
       console.error(error);
       this.messageService.add({
         severity: 'error',
-        summary: 'Error de guardado',
-        detail: 'No se pudo guardar el nuevo punto en la base de datos.',
+        summary: this.translate.instant('MAP.SAVE_ERROR'),
+        detail: this.translate.instant('MAP.POINT_SAVE_ERROR_DETAIL'),
       });
     }
   }
@@ -427,11 +435,12 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
   private createMapBackground(): void {
     this.mapLayer.removeChildren();
+    const themedBackgroundColor = this.getThemeBackgroundColor();
 
     if (this.mapBackgroundTexture) {
       const background = new Graphics();
       background.roundRect(0, 0, this.mapWidth, this.mapHeight, 28);
-      background.fill(0xf8fafc);
+      background.fill(themedBackgroundColor);
 
       const sprite = new Sprite(this.mapBackgroundTexture);
       const imageSize = this.hasConfiguredMapSize
@@ -461,7 +470,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
     const base = new Graphics();
     base.roundRect(0, 0, this.mapWidth, this.mapHeight, 28);
-    base.fill(0xf8fafc);
+    base.fill(themedBackgroundColor);
     base.stroke({ color: 0xcbd5e1, width: 4 });
 
     const corridor = new Graphics();
@@ -489,6 +498,22 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     this.mapLayer.addChild(base, corridor, roomA, roomB, roomC, roomD);
   }
 
+  private getThemeBackgroundColor(): number {
+    const backgroundColor = this.settings.settings()?.backgroundColor ?? '#f8fafc';
+    const normalized = backgroundColor.trim();
+
+    if (/^#[0-9a-f]{6}$/i.test(normalized)) {
+      return Number.parseInt(normalized.slice(1), 16);
+    }
+
+    if (/^#[0-9a-f]{3}$/i.test(normalized)) {
+      const [r, g, b] = normalized.slice(1).split('');
+      return Number.parseInt(`${r}${r}${g}${g}${b}${b}`, 16);
+    }
+
+    return 0xf8fafc;
+  }
+
   private renderPoints(): void {
     this.pointsLayer.removeChildren();
 
@@ -501,7 +526,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private getVisiblePoints(): MapPoint[] {
     const points = [...this.basePoints];
 
-    if (this.isInfoPointUser) {
+    if (this.isInfoPointUser && !this.basePoints.some((point) => this.isLoggedInfoPoint(point))) {
       points.push({
         id: 'current-screen-position',
         label: 'Tu punto de informacion',
@@ -521,7 +546,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       x: point.x,
       y: point.y,
       eventMode: 'static',
-      cursor: 'pointer',
+      cursor: this.canDragPoint(point) ? 'grab' : 'pointer',
     });
 
     const ring = new Graphics();
@@ -529,14 +554,13 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     const inner = new Graphics();
     const markerTexture = this.getMarkerTexture(point.type);
 
-    // Si es el punto logueado, color rojo
-    const isLoggedInfoPoint = point.type === 'info' && (point as any).userId === this.auth.getUserId();
+    const isLoggedInfoPoint = this.isLoggedInfoPoint(point);
     if (point.type === 'current-info') {
       ring.circle(0, 0, 32).fill({ color: 0xfef08a, alpha: 0.85 });
       ring.stroke({ color: 0xf59e0b, width: 4 });
     } else if (isLoggedInfoPoint) {
-      ring.circle(0, 0, 22).fill({ color: 0xff0000, alpha: 0.85 });
-      ring.stroke({ color: 0x7c2d12, width: 4 });
+      ring.circle(0, 0, 26).fill({ color: 0xf87171, alpha: 0.22 });
+      ring.stroke({ color: 0xdc2626, width: 2.5 });
     } else {
       ring.circle(0, 0, point.type === 'interest' ? 24 : 22).fill({
         color: point.type === 'interest' ? 0xffedd5 : 0xdbeafe,
@@ -550,7 +574,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       icon.anchor.set(0.5);
       icon.width = size;
       icon.height = size;
-      marker.addChild(icon);
+      marker.addChild(ring, icon);
     } else {
       if (point.type === 'interest') {
         pin.circle(0, 0, 15).fill(0xea580c);
@@ -569,6 +593,21 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       marker.addChild(ring, pin, inner);
     }
 
+    if (this.canDragPoint(point)) {
+      marker.on('pointerdown', (event: FederatedPointerEvent) => {
+        if (event.button !== 0 || this.pointDragSaving) {
+          return;
+        }
+
+        event.stopPropagation();
+        this.hideContextMenu();
+        this.draggedPointId = point.id;
+        this.pointDragMoved = false;
+        this.blockNextTap = false;
+        this.clearLongPressTimer();
+      });
+    }
+
     marker.on('pointertap', (event: FederatedPointerEvent) => {
       if (event.button !== 0 || this.blockNextTap) {
         this.blockNextTap = false;
@@ -582,25 +621,44 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     return marker;
   }
 
-  private handlePointClick(point: MapPoint): void {
+  private isLoggedInfoPoint(point: MapPoint): boolean {
+    const loggedUserId = this.auth.getUserId();
+    return point.type === 'info' && point.userId != null && loggedUserId != null && Number(point.userId) === loggedUserId;
+  }
+
+  private canDragPoint(point: MapPoint): boolean {
+    return this.isAdmin && point.persisted === true && point.type !== 'current-info';
+  }
+
+  private async handlePointClick(point: MapPoint): Promise<void> {
     // Si es punto de interés normal
     if (point.type === 'interest') {
+      let header = point.label;
+      try {
+        const languageCode = localStorage.getItem('lang') || 'es';
+        const content = await firstValueFrom(this.mapPointsService.getContent(point.id, languageCode));
+        header = content.translation?.title || point.label;
+      } catch (error) {
+        console.error('No se pudo cargar el título del punto de interés:', error);
+      }
+
       this.dialogService.open(PointOfInterestModalComponent, {
-        header: point.label,
-        width: '28rem',
+        header,
+        width: '52rem',
         modal: true,
         closable: true,
+        styleClass: 'poi-dialog',
         data: point,
       });
       return;
     }
 
     // Si es punto de información logueado
-    if (point.type === 'info' && (point as any).userId === this.auth.getUserId()) {
+    if (this.isLoggedInfoPoint(point)) {
       this.messageService.add({
         severity: 'info',
-        summary: 'Usted está aquí',
-        detail: 'Usted está aquí',
+        summary: this.translate.instant('MAP.YOU_ARE_HERE'),
+        detail: this.translate.instant('MAP.YOU_ARE_HERE'),
       });
       return;
     }
@@ -609,8 +667,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     if (point.type === 'info') {
       this.messageService.add({
         severity: 'info',
-        summary: 'Pantalla de información',
-        detail: 'Pantalla de información',
+        summary: this.translate.instant('MAP.INFO_SCREEN'),
+        detail: this.translate.instant('MAP.INFO_SCREEN'),
       });
       return;
     }
@@ -619,8 +677,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     if (point.type === 'current-info') {
       this.messageService.add({
         severity: 'info',
-        summary: 'Usted está aquí',
-        detail: 'Usted está aquí',
+        summary: this.translate.instant('MAP.YOU_ARE_HERE'),
+        detail: this.translate.instant('MAP.YOU_ARE_HERE'),
       });
       return;
     }
@@ -660,6 +718,10 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    if (this.draggedPointId) {
+      return;
+    }
+
     this.activePointerType = event.pointerType ?? 'mouse';
     this.isDragging = true;
     this.blockNextTap = false;
@@ -681,6 +743,26 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   };
 
   private readonly onPointerMove = (event: FederatedPointerEvent) => {
+    if (this.draggedPointId) {
+      const draggedPoint = this.basePoints.find((point) => point.id === this.draggedPointId);
+      if (!draggedPoint) {
+        this.draggedPointId = null;
+        return;
+      }
+
+      const nextPosition = this.getClampedWorldCoordinates(event.global.x, event.global.y);
+      const distance = Math.hypot(draggedPoint.x - nextPosition.x, draggedPoint.y - nextPosition.y);
+      if (distance > 1) {
+        this.pointDragMoved = true;
+        this.blockNextTap = true;
+      }
+
+      draggedPoint.x = nextPosition.x;
+      draggedPoint.y = nextPosition.y;
+      this.renderPoints();
+      return;
+    }
+
     if (!this.isDragging) {
       return;
     }
@@ -701,6 +783,38 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   };
 
   private readonly onPointerUp = () => {
+    if (this.draggedPointId) {
+      const draggedPoint = this.basePoints.find((point) => point.id === this.draggedPointId) ?? null;
+      const shouldPersist = this.pointDragMoved && draggedPoint?.persisted;
+      const draggedPointId = this.draggedPointId;
+
+      this.draggedPointId = null;
+      this.pointDragMoved = false;
+
+      if (shouldPersist && draggedPoint) {
+        this.pointDragSaving = true;
+        firstValueFrom(
+          this.mapPointsService.updatePosition(draggedPointId, {
+            x: draggedPoint.x,
+            y: draggedPoint.y,
+          })
+        )
+          .catch((error) => {
+            console.error('No se pudo mover el punto en el servidor:', error);
+            this.messageService.add({
+              severity: 'error',
+              summary: this.translate.instant('MAP.SAVE_ERROR'),
+              detail: this.translate.instant('MAP.POINT_SAVE_ERROR_DETAIL'),
+            });
+          })
+          .finally(() => {
+            this.pointDragSaving = false;
+          });
+      }
+
+      return;
+    }
+
     this.isDragging = false;
     this.clearLongPressTimer();
   };
@@ -774,6 +888,15 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
     };
   }
 
+  private getClampedWorldCoordinates(screenX: number, screenY: number) {
+    const position = this.toWorldCoordinates(screenX, screenY);
+
+    return {
+      x: Math.min(this.mapWidth, Math.max(0, position.x)),
+      y: Math.min(this.mapHeight, Math.max(0, position.y)),
+    };
+  }
+
   private setupResizeHandling(): void {
     const host = this.mapHost().nativeElement;
 
@@ -802,8 +925,8 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
         label: mapPoint.label,
         description: mapPoint.description,
         type: mapPoint.type,
-        x: mapPoint.x,
-        y: mapPoint.y,
+        x: Number(mapPoint.x),
+        y: Number(mapPoint.y),
         userId: mapPoint.userId,
         persisted: true,
       }));
