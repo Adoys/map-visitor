@@ -16,12 +16,14 @@ import { Application, Container, FederatedPointerEvent, Graphics, Sprite, Textur
 import { GeneralSettingsService } from '../../company-settings/general-settings/general-settings.service';
 import { LoginService } from '../../login/login.service';
 import { PointOfInterestModalComponent } from '../point-of-interest-modal/point-of-interest-modal.component';
-import { MapPointsService, MapPointPayload } from '../map-points.service';
+import { MapPointsService, MapPointPayload, MapPointResponse } from '../map-points.service';
 import { SelectInfoPointUserModalComponent } from '../select-info-point-user-modal.component';
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { UserService } from '../../user-modal/user.service';
 import { User } from '../../user-modal/models/users';
+import { SocketService } from '../../../core/services/socket.service';
 
 type MapPointType = 'interest' | 'info' | 'current-info';
 
@@ -73,6 +75,7 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private readonly settings = inject(GeneralSettingsService);
   private readonly messageService = inject(MessageService);
   private readonly dialogService = inject(DialogService);
+  private readonly socketService = inject(SocketService);
   private readonly mapImageInput = viewChild<ElementRef<HTMLInputElement>>('mapImageInput');
 
   private readonly mapContextOptions: PointMenuOption[] = [
@@ -162,6 +165,12 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
 
       this.refreshMapAssets().catch(console.error);
     });
+
+    this.socketService.mapPointsUpdated$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.reloadMapPointsFromServer().catch(console.error);
+      });
   }
 
   ngAfterViewInit(): void {
@@ -920,20 +929,33 @@ export class BaseMapComponent implements AfterViewInit, OnDestroy {
   private async loadMapPoints(): Promise<void> {
     try {
       const points = await firstValueFrom(this.mapPointsService.findAll());
-      this.basePoints = points.map((mapPoint) => ({
-        id: String(mapPoint.id),
-        label: mapPoint.label,
-        description: mapPoint.description,
-        type: mapPoint.type,
-        x: Number(mapPoint.x),
-        y: Number(mapPoint.y),
-        userId: mapPoint.userId,
-        persisted: true,
-      }));
+      this.basePoints = this.toMapPoints(points);
     } catch (error) {
       console.error('No se pudieron cargar los puntos del mapa:', error);
       this.basePoints = [...this.defaultBasePoints];
     }
+  }
+
+  private async reloadMapPointsFromServer(): Promise<void> {
+    const points = await firstValueFrom(this.mapPointsService.findAll());
+    this.basePoints = this.toMapPoints(points);
+
+    if (this.isReady) {
+      this.renderPoints();
+    }
+  }
+
+  private toMapPoints(points: MapPointResponse[]): MapPoint[] {
+    return points.map((mapPoint) => ({
+      id: String(mapPoint.id),
+      label: mapPoint.label,
+      description: mapPoint.description,
+      type: mapPoint.type,
+      x: Number(mapPoint.x),
+      y: Number(mapPoint.y),
+      userId: mapPoint.userId,
+      persisted: true,
+    }));
   }
 
   private async refreshMapAssets(): Promise<void> {

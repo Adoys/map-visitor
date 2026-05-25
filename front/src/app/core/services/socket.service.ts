@@ -2,6 +2,11 @@ import { Injectable } from '@angular/core';
 import { io, Socket } from 'socket.io-client';
 import { Subject } from 'rxjs';
 
+export interface MapPointsUpdatedEvent {
+  action?: 'created' | 'deleted' | 'position-updated' | 'updated';
+  pointId?: string | number;
+}
+
 @Injectable({ providedIn: 'root' })
 export class SocketService {
   private socket: Socket | null = null;
@@ -9,6 +14,7 @@ export class SocketService {
 
   // Subject para cada evento importante
   settingsUpdated$ = new Subject<any>();
+  mapPointsUpdated$ = new Subject<MapPointsUpdatedEvent | undefined>();
   connected$ = new Subject<boolean>();
 
   constructor() {
@@ -41,6 +47,10 @@ export class SocketService {
 
     this.socket.on('settingsUpdated', (data) => {
       this.settingsUpdated$.next(data);
+    });
+
+    this.socket.on('mapPointsUpdated', (data) => {
+      this.mapPointsUpdated$.next(data);
     });
 
     this.socket.on('connect_error', (error) => {
